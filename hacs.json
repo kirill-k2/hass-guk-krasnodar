@@ -1,4 +1,13 @@
 {
   "name": "GUK Krasnodar Personal Cabinet",
-  "render_readme": true
+  "render_readme": true,
+  "content_in_root": false,
+  "zip_release": false,
+  "domains": [
+    "sensor"
+  ],
+  "country": "ru",
+  "homeassistant": "2025.2.1",
+  "iot_class": "Cloud Polling"
+
 }
