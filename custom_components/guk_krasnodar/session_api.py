@@ -1,13 +1,20 @@
+import asyncio
+import json
 import logging
 from logging import exception
 from typing import Any, Union, SupportsInt, SupportsFloat, Final, Optional
-import asyncio
+
 import aiohttp
 
-import json
-
-from .exceptions import ResponseError, LoginError, EmptyResponse, ResponseTimeout
 from .model import Account, Meter
+from ._util import float_or_none, int_or_none
+from .const import (
+    API_URL,
+    FIELD_NAME_ACCOUNT_DEBT,
+    FIELD_NAME_ACCOUNT_CHARGED,
+    FIELD_DETAIL_METRIC_INDICATION,
+)
+from .exceptions import ResponseError, LoginError, EmptyResponse, ResponseTimeout
 
 _log = logging.getLogger(__name__)
 
@@ -57,7 +64,7 @@ class SessionAPI:
 
     @property
     def base_url(self) -> str:
-        return "https://lk.gukkrasnodar.ru"
+        return API_URL
 
     async def __request(
         self,
@@ -158,11 +165,37 @@ class SessionAPI:
                 company_id=account["id_company"],
                 number=account["account"],
                 address=account["address"],
+                api=self,
             )
             for account in response
         ]
         _log.debug(_accounts)
         return _accounts
+
+    async def update_account_detail(self, account: Account) -> [Account]:
+        data = {"id_company": account.company_id, "id_account": account.id}
+        response = await self._post(
+            f"{self.base_url}/api/v1/user/account/info/extend",
+            referer=f"{self.base_url}/cabinet/accounts",
+            data=data,
+        )
+
+        response = response.get("info", [])
+        _log.info(f"Детали по счету {account.id} получены ({len(response)})")
+        for detail in response:
+            if FIELD_NAME_ACCOUNT_DEBT.match(detail["name"]):
+                account.balance = float_or_none(detail["value"])
+            elif FIELD_NAME_ACCOUNT_CHARGED.match(detail["name"]):
+                account.charged = float_or_none(detail["value"])
+        _log.debug(account)
+        return account
+
+    @staticmethod
+    def _parse_last_indication(s: str) -> int | None:
+        m = FIELD_DETAIL_METRIC_INDICATION.match(s)
+        if not m:
+            return None
+        return int_or_none(m.group(1))
 
     async def meters(self, account: Account) -> [Meter]:
         data = {"id_company": account.company_id, "id_account": account.id}
@@ -178,18 +211,20 @@ class SessionAPI:
             Meter(
                 id=meter["id_meter"],
                 title=meter["title"],
+                account=account,
                 detail=meter["detail"],
                 info=meter["info"],
+                last_indication=self._parse_last_indication(meter["detail"]),
             )
             for meter in response
         ]
         _log.debug(_meters)
         return _meters
 
-    async def send_measure(self, account: Account, meter: Meter, value: int):
+    async def send_measure(self, meter: Meter, value: int):
         data = {
-            "id_company": account.company_id,
-            "id_account": account.id,
+            "id_company": meter.account.company_id,
+            "id_account": meter.account.id,
             "id_meter": meter.id,
             "value": value,
             "volume": None,
@@ -197,7 +232,7 @@ class SessionAPI:
         try:
             await self._post(
                 f"{self.base_url}/api/v1/user/account/meter/measure/set",
-                referer=f"{self.base_url}/cabinet/accounts/{account.company_id}/{account.id}/meters",
+                referer=f"{self.base_url}/cabinet/accounts/{meter.account.company_id}/{meter.account.id}/meters",
                 data=data,
             )
         except ResponseError as e:
@@ -238,4 +273,4 @@ async def push_measure(
         if meter is None:
             raise exception(f"Ошибка: счетчик {meter_title} не найден")
 
-        await session.send_measure(account=account, meter=meter, value=meter_value)
+        await session.send_measure(meter=meter, value=meter_value)

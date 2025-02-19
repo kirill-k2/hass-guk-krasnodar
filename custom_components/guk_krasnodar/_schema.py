@@ -17,10 +17,21 @@ from .const import (
     CONF_USER_AGENT,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_USER_AGENT,
+    CONF_DEV_PRESENTATION,
+    CONF_NAME_FORMAT,
+    DEFAULT_NAME_FORMAT_METERS,
+    DEFAULT_NAME_FORMAT_ACCOUNTS,
 )
 
 MIN_SCAN_INTERVAL = timedelta(seconds=300)
 
+NAME_FORMAT_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_ACCOUNTS, default=DEFAULT_NAME_FORMAT_ACCOUNTS): cv.string,
+        vol.Optional(CONF_METERS, default=DEFAULT_NAME_FORMAT_METERS): cv.string,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
 
 SCAN_INTERVAL_SCHEMA = vol.Schema(
     {
@@ -45,6 +56,11 @@ GENERIC_ACCOUNT_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_ACCOUNTS, default=True): cv.boolean,
         vol.Optional(CONF_METERS, default=True): cv.boolean,
+        vol.Optional(CONF_DEV_PRESENTATION, default=False): cv.boolean,
+        vol.Optional(CONF_NAME_FORMAT, default=lambda: NAME_FORMAT_SCHEMA({})): vol.Any(
+            vol.All(cv.string, lambda x: {CONF_ACCOUNTS: x}, NAME_FORMAT_SCHEMA),
+            NAME_FORMAT_SCHEMA,
+        ),
         vol.Optional(
             CONF_SCAN_INTERVAL, default=lambda: SCAN_INTERVAL_SCHEMA({})
         ): vol.Any(
@@ -70,13 +86,13 @@ def _make_account_validator(account_schema):
 
 GENERIC_ACCOUNT_VALIDATOR = _make_account_validator(GENERIC_ACCOUNT_SCHEMA)
 
-
 CONFIG_ENTRY_SCHEMA = vol.Schema(
     {
         # Primary API configuration
         vol.Required(CONF_USERNAME): cv.string,
         vol.Required(CONF_PASSWORD): cv.string,
         vol.Optional(CONF_USER_AGENT, default=DEFAULT_USER_AGENT): cv.string,
+        vol.Optional(CONF_DEV_PRESENTATION, default=False): cv.boolean,
         # Additional API configuration
         vol.Optional(
             CONF_DEFAULT, default=lambda: GENERIC_ACCOUNT_SCHEMA({})

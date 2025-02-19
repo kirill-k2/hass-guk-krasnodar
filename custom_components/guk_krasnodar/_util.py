@@ -3,9 +3,9 @@ from typing import Optional, Union, Any, TypeVar, Callable, Coroutine
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity_platform import EntityPlatform
 from homeassistant.const import CONF_USERNAME
 from homeassistant.core import callback, HomeAssistant
+from homeassistant.helpers.entity_platform import EntityPlatform
 
 from . import EmptyResponse, SessionAPIException
 from .const import DOMAIN
@@ -65,3 +65,17 @@ async def with_auto_auth(
     except SessionAPIException:
         await api.login()
         return await async_getter(*args, **kwargs)
+
+
+def float_or_none(s: str | None) -> float | None:
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def int_or_none(s: str | None) -> int | None:
+    try:
+        return int(s)
+    except ValueError:
+        return None

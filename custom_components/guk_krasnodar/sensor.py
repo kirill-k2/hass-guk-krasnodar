@@ -1,0 +1,412 @@
+"""
+Sensor for GUK Krasnodar cabinet.
+Retrieves indications regarding current state of accounts.
+"""
+
+import logging
+from abc import ABC
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    Final,
+    Hashable,
+    List,
+    Mapping,
+    Optional,
+    TypeVar,
+    Union,
+)
+
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from homeassistant.components.aprs.device_tracker import ATTR_COMMENT
+from homeassistant.components.lifx.const import ATTR_INDICATION
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.zha.const import ATTR_SUCCESS
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    ATTR_ENTITY_ID,
+    STATE_UNKNOWN,
+    ATTR_CODE,
+)
+from homeassistant.helpers.typing import ConfigType
+
+from ._base import (
+    SupportedServicesType,
+    GUKKrasnodarEntity,
+    make_common_async_setup_entry,
+)
+from .model import Account, Meter
+from ._util import with_auto_auth
+from .const import (
+    ATTR_ACCOUNT_CODE,
+    ATTR_ACCOUNT_COMPANY_ID,
+    ATTR_ACCOUNT_ID,
+    ATTR_ACCOUNT_NUMBER,
+    ATTR_ADDRESS,
+    ATTR_IGNORE_INDICATIONS,
+    ATTR_METER_CODE,
+    ATTR_METER_DETAIL,
+    ATTR_METER_ID,
+    ATTR_METER_INFO,
+    ATTR_METER_LAST_INDICATION,
+    ATTR_METER_TITLE,
+    CONF_ACCOUNTS,
+    CONF_METERS,
+    DOMAIN,
+    FORMAT_VAR_ACCOUNT_NUMBER,
+    FORMAT_VAR_CODE,
+    FORMAT_VAR_ID,
+    FORMAT_VAR_TITLE,
+    FORMAT_VAR_TYPE,
+)
+from .exceptions import SessionAPIException
+
+_log = logging.getLogger(__name__)
+
+PUSH_INDICATIONS_SCHEMA = vol.All(
+    cv.make_entity_service_schema(
+        {
+            vol.Required(ATTR_INDICATION): cv.positive_int,
+            vol.Optional(ATTR_IGNORE_INDICATIONS, default=False): cv.boolean,
+            vol.Optional("notification"): lambda x: x,
+        }
+    ),
+    cv.deprecated("notification"),
+)
+
+SERVICE_PUSH_INDICATIONS: Final = "push_indications"
+SERVICE_PUSH_INDICATIONS_SCHEMA: Final = PUSH_INDICATIONS_SCHEMA
+
+_TGUKKrasnodarEntity = TypeVar("_TGUKKrasnodarEntity", bound=GUKKrasnodarEntity)
+
+
+def get_supported_features(
+    from_services: SupportedServicesType, for_object: Any
+) -> int:
+    features = 0
+    for type_feature, services in from_services.items():
+        if type_feature is None:
+            continue
+        check_cls, feature = type_feature
+        if isinstance(for_object, check_cls):
+            features |= feature
+
+    return features
+
+
+class GUKKrasnodarSensor(GUKKrasnodarEntity, SensorEntity, ABC):
+    pass
+
+
+class GUKKrasnodarAccount(GUKKrasnodarSensor):
+    """The class for this sensor"""
+
+    config_key: ClassVar[str] = CONF_ACCOUNTS
+
+    _attr_unit_of_measurement = "руб."
+    _attr_icon = "mdi:home-city-outline"
+    _attr_device_class = DOMAIN + "_account"
+
+    _supported_services: ClassVar[SupportedServicesType] = {
+        None: {},
+    }
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, *kwargs)
+
+        self.entity_id: Optional[str] = "sensor." + self.entity_id_prefix + "_account"
+
+    @property
+    def code(self) -> str:
+        return self._account.code
+
+    @property
+    def unique_id(self) -> str:
+        """Return the unique ID of the sensor"""
+        return f"{DOMAIN}_account_{self._account.code}"
+
+    @property
+    def state(self) -> Union[float, str]:
+        balance = self._account.balance
+        if balance is None:
+            return STATE_UNKNOWN
+        if balance == 0.0:
+            return 0.0
+        return balance
+
+    @property
+    def sensor_related_attributes(self) -> Optional[Mapping[str, Any]]:
+        account = self._account
+
+        attributes = {
+            ATTR_ACCOUNT_ID: account.id,
+            ATTR_ACCOUNT_COMPANY_ID: account.company_id,
+            ATTR_ACCOUNT_NUMBER: account.number,
+            ATTR_ADDRESS: account.address,
+            ATTR_CODE: account.code,
+        }
+
+        self._handle_dev_presentation(
+            attributes,
+            (),
+            (ATTR_ADDRESS, ATTR_ACCOUNT_NUMBER, ATTR_ACCOUNT_ID, ATTR_ACCOUNT_CODE),
+        )
+
+        return attributes
+
+    @property
+    def name_format_values(self) -> Mapping[str, Any]:
+        """Return the name of the sensor"""
+        account = self._account
+        return {
+            FORMAT_VAR_ACCOUNT_NUMBER: str(account.number),
+            FORMAT_VAR_ID: str(account.id),
+            FORMAT_VAR_CODE: str(account.code),
+            FORMAT_VAR_TYPE: "лицевой счёт",
+        }
+
+    #################################################################################
+    # Functional implementation of inherent class
+    #################################################################################
+
+    @classmethod
+    async def async_refresh_accounts(
+        cls,
+        entities: Dict[Hashable, "GUKKrasnodarAccount"],
+        account: "Account",
+        config_entry: ConfigEntry,
+        account_config: ConfigType,
+        async_add_entities: Callable[[List["GUKKrasnodarAccount"], bool], Any],
+    ) -> None:
+        entity_key = account.code
+        try:
+            entity = entities[entity_key]
+        except KeyError:
+            entity = cls(account, account_config)
+            entities[entity_key] = entity
+
+            async_add_entities([entity], False)
+        else:
+            if entity.enabled:
+                entity.async_schedule_update_ha_state(force_refresh=True)
+
+    async def async_update_internal(self) -> None:
+        account = self._account
+        account_code = account.code
+        accounts = await account.api.accounts()
+
+        for account in accounts:
+            if account.code == account_code:
+                await account.api.update_account_detail(account)
+                self._account = account
+                break
+
+        self.register_supported_services(account)
+
+    #################################################################################
+    # Services callbacks
+    #################################################################################
+
+    @property
+    def supported_features(self) -> int:
+        return get_supported_features(
+            self._supported_services,
+            self._account,
+        )
+
+
+class GUKKrasnodarMeter(GUKKrasnodarSensor):
+    """The class for this sensor"""
+
+    config_key: ClassVar[str] = CONF_METERS
+
+    _attr_icon = "mdi:counter"
+    _attr_device_class = DOMAIN + "_meter"
+
+    _supported_services: ClassVar[SupportedServicesType] = {
+        None: {
+            SERVICE_PUSH_INDICATIONS: SERVICE_PUSH_INDICATIONS_SCHEMA,
+        },
+    }
+
+    def __init__(self, *args, meter: "Meter", **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._meter = meter
+
+        self.entity_id: Optional[str] = (
+            "sensor." + self.entity_id_prefix + "_meter_" + meter.code
+        )
+
+    #################################################################################
+    # Implementation base of inherent class
+    #################################################################################
+
+    @classmethod
+    async def async_refresh_accounts(
+        cls,
+        entities: Dict[Hashable, Optional[_TGUKKrasnodarEntity]],
+        account: "Account",
+        config_entry: ConfigEntry,
+        account_config: ConfigType,
+        async_add_entities: Callable[[List[_TGUKKrasnodarEntity], bool], Any],
+    ):
+        new_meter_entities = []
+        meters = await account.api.meters(account)
+
+        for meter in meters:
+            entity_key = (account.code, meter.code)
+            try:
+                entity = entities[entity_key]
+            except KeyError:
+                entity = cls(
+                    account,
+                    account_config,
+                    meter=meter,
+                )
+                entities[entity_key] = entity
+                new_meter_entities.append(entity)
+            else:
+                if entity.enabled:
+                    entity.async_schedule_update_ha_state(force_refresh=True)
+
+        if new_meter_entities:
+            async_add_entities(new_meter_entities, False)
+
+    async def async_update_internal(self) -> None:
+        meters = await self._account.api.meters(self._account)
+        meter_code = self._meter.code
+        meter = next((m for m in meters if m.code == meter_code), None)
+
+        if meter is None:
+            self.hass.async_create_task(self.async_remove())
+        else:
+            self.register_supported_services(meter)
+            self._meter = meter
+
+    #################################################################################
+    # Data-oriented implementation of inherent class
+    #################################################################################
+
+    @property
+    def code(self) -> str:
+        return self._meter.code
+
+    @property
+    def unique_id(self) -> str:
+        """Return the unique ID of the sensor"""
+        met = self._meter
+        return f"{DOMAIN}_meter_{met.account.code}_{met.code}"
+
+    @property
+    def state(self) -> Union[int, str]:
+        indication = self._meter.last_indication
+        if indication is None:
+            return STATE_UNKNOWN
+        if indication == 0:
+            return 0
+        return indication
+
+    @property
+    def sensor_related_attributes(self) -> Optional[Mapping[str, Any]]:
+        meter = self._meter
+
+        attributes = {
+            ATTR_METER_ID: meter.id,
+            ATTR_ACCOUNT_CODE: meter.account.code,
+            ATTR_METER_TITLE: meter.title,
+            ATTR_METER_INFO: meter.info,
+            ATTR_METER_DETAIL: meter.detail,
+            ATTR_METER_LAST_INDICATION: meter.last_indication,
+        }
+
+        self._handle_dev_presentation(
+            attributes,
+            (),
+            (
+                ATTR_METER_TITLE,
+                ATTR_METER_INFO,
+                ATTR_METER_DETAIL,
+            ),
+        )
+
+        return attributes
+
+    @property
+    def name_format_values(self) -> Mapping[str, Any]:
+        meter = self._meter
+        return {
+            FORMAT_VAR_ID: meter.code or "<unknown>",
+            FORMAT_VAR_TITLE: meter.title or "<unknown>",
+            FORMAT_VAR_TYPE: "счётчик",
+        }
+
+    #################################################################################
+    # Push service
+    #################################################################################
+
+    async def async_service_push_indications(self, **call_data):
+        """
+        Push indications entity service.
+        :param call_data: Parameters for service call
+        :return:
+        """
+        _log.info(self.log_prefix + "Begin handling indications submission")
+
+        meter = self._meter
+
+        if meter is None:
+            raise Exception("Meter is unavailable")
+
+        meter_code = meter.code
+
+        event_data = {
+            ATTR_ENTITY_ID: self.entity_id,
+            ATTR_METER_CODE: meter_code,
+            ATTR_SUCCESS: False,
+            ATTR_INDICATION: None,
+            ATTR_COMMENT: None,
+        }
+
+        try:
+            indication = call_data[ATTR_INDICATION]
+            event_data[ATTR_INDICATION] = indication
+
+            kwargs = {"meter": meter, "value": indication}
+
+            await with_auto_auth(
+                meter.api,
+                meter.api.send_measure(),
+                **kwargs,
+            )
+
+        except SessionAPIException as e:
+            event_data[ATTR_COMMENT] = "API error: %s" % e
+            raise
+
+        except BaseException as e:
+            event_data[ATTR_COMMENT] = "Unknown error: %r" % e
+            _log.error(event_data[ATTR_COMMENT])
+            raise
+
+        else:
+            event_data[ATTR_COMMENT] = "Indications submitted successfully"
+            event_data[ATTR_SUCCESS] = True
+            self.async_schedule_update_ha_state(force_refresh=True)
+
+        finally:
+            _log.debug(self.log_prefix + "Indications push event: " + str(event_data))
+            self.hass.bus.async_fire(
+                event_type=DOMAIN + "_" + SERVICE_PUSH_INDICATIONS,
+                event_data=event_data,
+            )
+
+            _log.info(self.log_prefix + "End handling indications submission")
+
+
+async_setup_entry = make_common_async_setup_entry(
+    GUKKrasnodarAccount,
+    GUKKrasnodarMeter,
+)

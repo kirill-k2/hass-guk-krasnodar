@@ -15,29 +15,26 @@ import asyncio
 import logging
 from typing import Dict, Tuple, List, Any, Mapping, Optional
 
+import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.helpers import config_validation as cv
-import voluptuous as vol
 
 from ._base import UpdateDelegatorsDataType
 from ._schema import CONFIG_ENTRY_SCHEMA
 from ._util import _find_existing_entry, mask_username, _make_log_prefix
 from .const import (
-    DOMAIN,
-    DATA_YAML_CONFIG,
+    CONF_USER_AGENT,
     DATA_API_OBJECTS,
     DATA_ENTITIES,
     DATA_FINAL_CONFIG,
     DATA_UPDATE_DELEGATORS,
-    SUPPORTED_PLATFORMS,
     DATA_UPDATE_LISTENERS,
-)
-
-from .const import (
-    CONF_USER_AGENT,
+    DATA_YAML_CONFIG,
+    DOMAIN,
+    SUPPORTED_PLATFORMS,
 )
 from .exceptions import SessionAPIException, EmptyResponse
 
@@ -266,7 +263,7 @@ async def async_reload_entry(
     hass: HomeAssistant,
     config_entry: config_entries.ConfigEntry,
 ) -> None:
-    """Reload Lkcomu TNS Energo entry"""
+    """Reload GUK Krasnodar entry"""
     log_prefix = _make_log_prefix(config_entry, "setup")
     _log.info(log_prefix + "Перезагрузка интеграции")
     await hass.config_entries.async_reload(config_entry.entry_id)
@@ -276,7 +273,7 @@ async def async_unload_entry(
     hass: HomeAssistant,
     config_entry: config_entries.ConfigEntry,
 ) -> bool:
-    """Unload Lkcomu TNS Energo entry"""
+    """Unload GUK Krasnodar entry"""
     log_prefix = _make_log_prefix(config_entry, "setup")
     entry_id = config_entry.entry_id
 
