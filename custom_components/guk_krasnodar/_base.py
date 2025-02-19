@@ -42,10 +42,11 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
 )
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import ConfigType, HomeAssistantType, StateType
+from homeassistant.helpers.typing import ConfigType, StateType
 from homeassistant.util import as_local, utcnow
 
 from ._util import mask_username, with_auto_auth
@@ -92,7 +93,7 @@ def make_common_async_setup_entry(
     entity_cls: Type["GUKKrasnodarEntity"], *args: Type["GUKKrasnodarEntity"]
 ):
     async def _async_setup_entry(
-        hass: HomeAssistantType,
+        hass: HomeAssistant,
         config_entry: ConfigEntry,
         async_add_devices,
     ):
@@ -119,7 +120,7 @@ def make_common_async_setup_entry(
 
 
 async def async_register_update_delegator(
-    hass: HomeAssistantType,
+    hass: HomeAssistant,
     config_entry: ConfigEntry,
     platform: str,
     async_add_entities: AddEntitiesCallType,
@@ -144,7 +145,7 @@ async def async_register_update_delegator(
 DEV_CLASSES_PROCESSED = set()
 
 
-async def async_refresh_api_data(hass: HomeAssistantType, config_entry: ConfigEntry):
+async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry):
     entry_id = config_entry.entry_id
 
     update_delegators: UpdateDelegatorsDataType = hass.data[DATA_UPDATE_DELEGATORS][

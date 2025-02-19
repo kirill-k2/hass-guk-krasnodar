@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import re
-from typing import Optional, Union, Any, TypeVar, Callable, Coroutine
+from typing import Any, TypeVar, Callable, Coroutine, TYPE_CHECKING
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
@@ -7,13 +9,15 @@ from homeassistant.const import CONF_USERNAME
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.helpers.entity_platform import EntityPlatform
 
-from . import EmptyResponse, SessionAPIException
+from .exceptions import EmptyResponse, SessionAPIException
 from .const import DOMAIN
-from .session_api import SessionAPI
+
+if TYPE_CHECKING:
+    from .session_api import SessionAPI
 
 
 def _make_log_prefix(
-    config_entry: Union[Any, ConfigEntry], domain: Union[Any, EntityPlatform], *args
+    config_entry: Any | ConfigEntry, domain: Any | EntityPlatform, *args
 ):
     join_args = [
         (
@@ -32,7 +36,7 @@ def _make_log_prefix(
 @callback
 def _find_existing_entry(
     hass: HomeAssistant, username: str
-) -> Optional[config_entries.ConfigEntry]:
+) -> config_entries.ConfigEntry | None:
     existing_entries = hass.config_entries.async_entries(DOMAIN)
     for config_entry in existing_entries:
         if config_entry.data[CONF_USERNAME] == username:
@@ -52,7 +56,7 @@ _RT = TypeVar("_RT")
 
 
 async def with_auto_auth(
-    api: "SessionAPI",
+    api: SessionAPI,
     async_getter: Callable[..., Coroutine[Any, Any, _RT]],
     *args,
     **kwargs,

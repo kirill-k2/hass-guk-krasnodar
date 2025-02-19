@@ -1,8 +1,9 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from guk_krasnodar.session_api import SessionAPI
+    from .session_api import SessionAPI
 
 
 @dataclass
@@ -30,9 +31,9 @@ class Meter:
     account: Account | None = None
 
     @property
-    def code(self):
+    def code(self) -> str:
         return self.id
 
     @property
-    def api(self):
+    def api(self) -> SessionAPI:
         return self.account.api if self.account else None
