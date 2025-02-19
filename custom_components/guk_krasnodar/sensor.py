@@ -21,10 +21,7 @@ from typing import (
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.components.aprs.device_tracker import ATTR_COMMENT
-from homeassistant.components.lifx.const import ATTR_INDICATION
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.components.zha.const import ATTR_SUCCESS
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -61,6 +58,9 @@ from .const import (
     FORMAT_VAR_ID,
     FORMAT_VAR_TITLE,
     FORMAT_VAR_TYPE,
+    ATTR_COMMENT,
+    ATTR_INDICATION,
+    ATTR_SUCCESS,
 )
 from .exceptions import SessionAPIException
 
