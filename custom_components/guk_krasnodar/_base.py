@@ -49,7 +49,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType, StateType
 from homeassistant.util import as_local, utcnow
 
-from ._util import mask_username, with_auto_auth
+from ._util import mask_value, with_auto_auth
 from .const import (
     ATTRIBUTION_RU,
     ATTR_ACCOUNT_CODE,
@@ -99,7 +99,7 @@ def make_common_async_setup_entry(
         current_entity_platform = entity_platform.current_platform.get()
 
         log_prefix = (
-            f"[{mask_username(config_entry.data[CONF_USERNAME])}]"
+            f"[{mask_value(config_entry.data[CONF_USERNAME])}]"
             f"[{current_entity_platform.domain}][setup] "
         )
         _log.debug(log_prefix + "Регистрация делегата обновлений")
@@ -151,7 +151,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
         entry_id
     ]
 
-    log_prefix_base = f"[{mask_username(config_entry.data[CONF_USERNAME])}]"
+    log_prefix_base = f"[{mask_value(config_entry.data[CONF_USERNAME])}]"
     refresh_log_prefix = log_prefix_base + "[refresh] "
 
     _log.info(refresh_log_prefix + "Запуск обновления связанных с профилем данных")
@@ -190,9 +190,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
 
     for account in accounts:
         account_config = accounts_config.get(account.code)
-        account_log_prefix_base = (
-            refresh_log_prefix + f"[{mask_username(account.code)}]"
-        )
+        account_log_prefix_base = refresh_log_prefix + f"[{mask_value(account.code)}]"
 
         if account_config is None:
             account_config = account_default_config

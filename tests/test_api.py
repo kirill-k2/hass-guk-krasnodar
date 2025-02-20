@@ -1,10 +1,11 @@
+"""Test raw api."""
+
 from .conftest import mock_gukk_aiohttp_client
 from custom_components.guk_krasnodar.exceptions import AccessDenied
+from custom_components.guk_krasnodar.guk_krasnodar_api import GUKKrasnodarAPI
 
 
 async def test_api_login_fail(hass, gukk_aioclient_mock):
-    from guk_krasnodar.guk_krasnodar_api import GUKKrasnodarAPI
-
     with mock_gukk_aiohttp_client(hass, gukk_aioclient_mock):
         api: GUKKrasnodarAPI = GUKKrasnodarAPI(
             username="username_bad", password="password_bad"
@@ -21,8 +22,6 @@ async def test_api_login_fail(hass, gukk_aioclient_mock):
 
 
 async def test_api_login(hass, gukk_aioclient_mock):
-    from guk_krasnodar.guk_krasnodar_api import GUKKrasnodarAPI
-
     with mock_gukk_aiohttp_client(hass, gukk_aioclient_mock):
         api: GUKKrasnodarAPI = GUKKrasnodarAPI(
             username="username@domain.ru", password="password"
@@ -34,8 +33,6 @@ async def test_api_login(hass, gukk_aioclient_mock):
 
 
 async def test_api_accounts(hass, gukk_aioclient_mock):
-    from guk_krasnodar.guk_krasnodar_api import GUKKrasnodarAPI
-
     with mock_gukk_aiohttp_client(hass, gukk_aioclient_mock):
         api: GUKKrasnodarAPI = GUKKrasnodarAPI(username="username", password="password")
 
@@ -43,8 +40,6 @@ async def test_api_accounts(hass, gukk_aioclient_mock):
 
 
 async def test_api_meters(hass, gukk_aioclient_mock, mock_account):
-    from guk_krasnodar.guk_krasnodar_api import GUKKrasnodarAPI
-
     with mock_gukk_aiohttp_client(hass, gukk_aioclient_mock):
         api: GUKKrasnodarAPI = GUKKrasnodarAPI(username="username", password="password")
 
@@ -53,8 +48,6 @@ async def test_api_meters(hass, gukk_aioclient_mock, mock_account):
 
 
 async def test_api_update_account_detail(hass, gukk_aioclient_mock, mock_account):
-    from guk_krasnodar.guk_krasnodar_api import GUKKrasnodarAPI
-
     with mock_gukk_aiohttp_client(hass, gukk_aioclient_mock):
         api: GUKKrasnodarAPI = GUKKrasnodarAPI(username="username", password="password")
 

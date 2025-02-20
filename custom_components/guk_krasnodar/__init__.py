@@ -25,7 +25,7 @@ from homeassistant.helpers import config_validation as cv
 
 from ._base import UpdateDelegatorsDataType
 from ._schema import CONFIG_ENTRY_SCHEMA
-from ._util import _find_existing_entry, mask_username, _make_log_prefix
+from ._util import _find_existing_entry, mask_value, _make_log_prefix
 from .const import (
     CONF_USER_AGENT,
     DATA_API_OBJECTS,
@@ -106,7 +106,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         username: str = user_cfg[CONF_USERNAME]
 
         key = username
-        log_prefix = f"[{mask_username(username)}] "
+        log_prefix = f"[{mask_value(username)}] "
 
         _log.info(log_prefix + "Получена конфигурация из YAML")
 
@@ -149,7 +149,7 @@ async def async_setup_entry(
     username = config_entry.data[CONF_USERNAME]
     unique_key = username
     entry_id = config_entry.entry_id
-    log_prefix = f"[{mask_username(username)}] "
+    log_prefix = f"[{mask_value(username)}] "
     hass_data = hass.data
 
     _log.debug(log_prefix + "Настройка конфигурационной записи")
@@ -287,11 +287,11 @@ async def async_unload_entry(
         for domain in update_delegators.keys()
     ]
 
+    unload_ok = all(await asyncio.gather(*tasks))
+
     # Unload services
     for service in hass.services.async_services_for_domain(DOMAIN):
-        tasks.append(hass.services.async_remove(DOMAIN, service))
-
-    unload_ok = all(await asyncio.gather(*tasks))
+        hass.services.async_remove(DOMAIN, service)
 
     if unload_ok:
         hass.data[DATA_API_OBJECTS].pop(entry_id)

@@ -46,7 +46,7 @@ def _find_existing_entry(
 _RE_USERNAME_MASK = re.compile(r"^(\W*)(.).*(.)$")
 
 
-def mask_username(username: str):
+def mask_value(username: str):
     parts = username.split("@")
     return "@".join(map(lambda x: _RE_USERNAME_MASK.sub(r"\1\2***\3", x), parts))
 

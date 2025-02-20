@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -14,7 +14,9 @@ class Account:
     address: str = ""
     balance: float | None = None
     charged: float | None = None
-    api: GUKKrasnodarAPI | None = None
+
+    # @todo - вынести api в coordinator или аналогичный механизм
+    api: GUKKrasnodarAPI | None = field(default=None, repr=False)
 
     @property
     def code(self) -> str:
@@ -34,6 +36,7 @@ class Meter:
     detail: str = ""
     info: str = ""
     last_indication: int | None = None
+    last_indications_date: str | None = None
     account: Account | None = None
 
     @property

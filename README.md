@@ -7,7 +7,6 @@ GUK Krasnodar personal cabinet information and status retrieval, with meter indi
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-green.svg)](https://github.com/custom-components/hacs) [![Лицензия](https://img.shields.io/badge/%D0%9B%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Поддержка](https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B8%D0%B2%D0%B0%D0%B5%D1%82%D1%81%D1%8F%3F-%D0%B4%D0%B0-green.svg)](https://github.com/kirill-k2/hass-guk-krasnodar/graphs/commit-activity)
 
-
 ## Установка
 
 1. Установите как custom_components
@@ -51,6 +50,8 @@ guk_krasnodar:
 ```
 
 ## Сервис отправки показаний
+
+Пример отправки показаний счетчика `sensor.pokazanya_schetchika_vody` каждого 18го числа в 12:00.
 
 ```yaml
 alias: Отправка показаний ГУК Краснодар

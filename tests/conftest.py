@@ -8,7 +8,13 @@ from typing import Final, Iterator
 from unittest import mock
 
 import pytest
-from homeassistant.const import CONF_USERNAME, CONF_PASSWORD, EVENT_HOMEASSISTANT_CLOSE
+from homeassistant.const import (
+    CONF_USERNAME,
+    CONF_PASSWORD,
+    EVENT_HOMEASSISTANT_CLOSE,
+    CONF_SCAN_INTERVAL,
+    CONF_DEFAULT,
+)
 from pytest_homeassistant_custom_component.common import load_fixture
 from pytest_homeassistant_custom_component.test_util.aiohttp import (
     AiohttpClientMocker,
@@ -26,13 +32,22 @@ FIXTURE_JSON_ACCOUNTS = "accounts.json"
 FIXTURE_JSON_ACCOUNT_DETAIL = "account_detail.json"
 FIXTURE_JSON_METERS = "meters.json"
 
-BASE_CONFIG: Final = {
+CONFIG_BASE: Final = {
     CONF_USERNAME: "username@domain.ru",
     CONF_PASSWORD: "password",
     CONF_USER_AGENT: "TEST_UA",
 }
 
-logging.getLogger("custom_components.guk_krasnodar").setLevel(logging.DEBUG)
+CONFIG_FAST_UPDATES: Final = {
+    CONF_USERNAME: "username@domain.ru",
+    CONF_PASSWORD: "password",
+    CONF_USER_AGENT: "TEST_UA",
+    CONF_DEFAULT: {
+        CONF_SCAN_INTERVAL: 1,
+    },
+}
+
+logging.getLogger("custom_components.guk_krasnodar").setLevel(logging.INFO)
 
 
 @pytest.fixture(autouse=True)

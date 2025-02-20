@@ -225,7 +225,9 @@ class GUKKrasnodarAPI:
         )
 
         response = response.get("info", [])
-        _log.info(f"Детали по счету {account.id} получены ({len(response)})")
+        _log.info(
+            f"Детали по счету {account.company_id} {account.id} получены ({len(response)})"
+        )
         for detail in response:
             if FIELD_NAME_ACCOUNT_DEBT.match(detail["name"]):
                 account.balance = float_or_none(detail["value"])
@@ -234,13 +236,6 @@ class GUKKrasnodarAPI:
         _log.debug(account)
         return account
 
-    @staticmethod
-    def _parse_last_indication(s: str) -> int | None:
-        m = FIELD_DETAIL_METRIC_INDICATION.match(s)
-        if not m:
-            return None
-        return int_or_none(m.group(1))
-
     async def async_meters(self, account: Account) -> [Meter]:
         data = {"id_company": account.company_id, "id_account": account.id}
         response = await self._async_post(
@@ -248,6 +243,12 @@ class GUKKrasnodarAPI:
             referer=f"{self.base_url}/cabinet/accounts/{account.company_id}/{account.id}/meters",
             data=data,
         )
+
+        def _parse_last_indication(s: str) -> tuple[int | None, str | None]:
+            m = FIELD_DETAIL_METRIC_INDICATION.match(s)
+            if not m:
+                return None, None
+            return int_or_none(m.group(1)), m.group(2)
 
         response = response.get("meter", [])
         _log.info(f"Список счетчиков получен ({len(response)})")
@@ -258,7 +259,8 @@ class GUKKrasnodarAPI:
                 account=account,
                 detail=meter["detail"],
                 info=meter["info"],
-                last_indication=self._parse_last_indication(meter["detail"]),
+                last_indication=_parse_last_indication(meter["detail"])[0],
+                last_indications_date=_parse_last_indication(meter["detail"])[1],
             )
             for meter in response
         ]

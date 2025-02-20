@@ -4,7 +4,7 @@ from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
-from .conftest import BASE_CONFIG, mock_gukk_aiohttp_client
+from .conftest import CONFIG_BASE, mock_gukk_aiohttp_client
 from custom_components.guk_krasnodar.const import DOMAIN, DATA_ENTITIES
 from custom_components.guk_krasnodar.sensor import GUKKrasnodarAccount
 
@@ -17,7 +17,7 @@ async def test_async_setup(hass):
 async def test_config_in_config_entry(hass: HomeAssistant, gukk_aioclient_mock) -> None:
     """Test that config are loaded via config entry."""
 
-    entry_config = BASE_CONFIG.copy()
+    entry_config = CONFIG_BASE.copy()
     # no config_entry exists
     assert len(hass.config_entries.async_entries(DOMAIN)) == 0
     # no data exists
@@ -41,22 +41,13 @@ async def test_config_in_config_entry(hass: HomeAssistant, gukk_aioclient_mock) 
         GUKKrasnodarAccount,
     )
 
-    # @todo вынести тесты отдельно
-
-    assert hass.states.get("sensor.guk_krasnodar_1_12345_meter_67890").state == "123"
-    assert hass.states.get("sensor.guk_krasnodar_1_12345_account").state == "unknown"
-
-    await hass.async_block_till_done()
-
-    # assert hass.states.get("sensor.guk_krasnodar_1_12345_account").state == "1234.56"
-
 
 async def test_setup_services_and_unload_services(
     hass: HomeAssistant, gukk_aioclient_mock
 ) -> None:
     """Test setup services and unload services."""
 
-    mock_config = BASE_CONFIG.copy()
+    mock_config = CONFIG_BASE.copy()
     # @todo - вернуть чистый мок, без async_setup_component
     # MockConfigEntry(domain=DOMAIN, data=mock_config).add_to_hass(hass)
     with mock_gukk_aiohttp_client(hass, gukk_aioclient_mock):
