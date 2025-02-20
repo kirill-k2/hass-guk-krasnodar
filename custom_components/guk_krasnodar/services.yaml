@@ -1,4 +1,5 @@
 push_indications:
+  name: Передать показания
   description: 'Передать показания в личный кабинет'
   target:
     entity:
@@ -6,6 +7,7 @@ push_indications:
       device_class: guk_krasnodar_meter
   fields:
     indications:
+      name: Значение показаний
       description: 'Значение показаний БЕЗ десятичной части (до точки)'
       required: true
       advanced: false
@@ -14,6 +16,7 @@ push_indications:
         text:
           multiline: false
     notification:
+      name: Показывать уведомление
       description: 'Показывать уведомление при успешной передаче'
       required: false
       advanced: false
@@ -22,6 +25,7 @@ push_indications:
       selector:
         boolean:
     ignore_indications:
+      name: Игнорировать ограничения
       description: 'Игнорировать ограничения по показаниям'
       required: false
       advanced: true
