@@ -39,7 +39,7 @@ from .const import (
 )
 from .exceptions import SessionAPIException, EmptyResponse
 
-_log = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 def _unique_entries(value: List[Mapping[str, Any]]) -> List[Mapping[str, Any]]:
@@ -108,17 +108,17 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         key = username
         log_prefix = f"[{mask_value(username)}] "
 
-        _log.info(log_prefix + "Получена конфигурация из YAML")
+        _LOGGER.info(log_prefix + "Получена конфигурация из YAML")
 
         existing_entry = _find_existing_entry(hass, username)
         if existing_entry:
             if existing_entry.source == config_entries.SOURCE_IMPORT:
                 yaml_config[key] = user_cfg
-                _log.debug(
+                _LOGGER.debug(
                     log_prefix + "Соответствующая конфигурационная запись существует"
                 )
             else:
-                _log.warning(
+                _LOGGER.warning(
                     log_prefix
                     + "Конфигурация из YAML переопределена другой конфигурацией!"
                 )
@@ -127,7 +127,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         # Save YAML configuration
         yaml_config[key] = user_cfg
 
-        _log.warning(log_prefix + "Создание новой конфигурационной записи")
+        _LOGGER.warning(log_prefix + "Создание новой конфигурационной записи")
 
         hass.async_create_task(
             hass.config_entries.flow.async_init(
@@ -138,7 +138,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         )
 
     if not yaml_config:
-        _log.debug("Конфигурация из YAML не обнаружена")
+        _LOGGER.debug("Конфигурация из YAML не обнаружена")
 
     return True
 
@@ -152,7 +152,7 @@ async def async_setup_entry(
     log_prefix = f"[{mask_value(username)}] "
     hass_data = hass.data
 
-    _log.debug(log_prefix + "Настройка конфигурационной записи")
+    _LOGGER.debug(log_prefix + "Настройка конфигурационной записи")
 
     # Source full configuration
     if config_entry.source == config_entries.SOURCE_IMPORT:
@@ -160,7 +160,7 @@ async def async_setup_entry(
         yaml_config = hass_data.get(DATA_YAML_CONFIG)
 
         if not yaml_config or unique_key not in yaml_config:
-            _log.info(
+            _LOGGER.info(
                 log_prefix
                 + f"Удаление записи {entry_id} после удаления из конфигурации YAML"
             )
@@ -180,10 +180,12 @@ async def async_setup_entry(
         try:
             user_cfg = CONFIG_ENTRY_SCHEMA(all_cfg)
         except vol.Invalid as e:
-            _log.error(log_prefix + "Сохранённая конфигурация повреждена: " + repr(e))
+            _LOGGER.error(
+                log_prefix + "Сохранённая конфигурация повреждена: " + repr(e)
+            )
             return False
 
-    _log.info(log_prefix + "Применение конфигурационной записи")
+    _LOGGER.info(log_prefix + "Применение конфигурационной записи")
 
     from .guk_krasnodar_api import GUKKrasnodarAPI
 
@@ -199,30 +201,30 @@ async def async_setup_entry(
 
         except SessionAPIException as e:
             log_message = log_prefix + "Ошибка авторизации: " + repr(e)
-            _log.error(log_message)
+            _LOGGER.error(log_message)
             raise ConfigEntryAuthFailed(log_message)
 
         accounts = None
         for i in range(3):
-            _log.debug(log_prefix + "Ожидание перед запросом лицевых счетов")
+            _LOGGER.debug(log_prefix + "Ожидание перед запросом лицевых счетов")
             await asyncio.sleep(1)
 
             try:
                 accounts = await api_object.async_accounts()
             except EmptyResponse:
-                _log.warning(
+                _LOGGER.warning(
                     log_prefix + "Получен пустой ответ на запрос лицевых счетов"
                 )
             except SessionAPIException as e:
                 log_message = "Ошибка получения данных о лицевых счетах: " + str(e)
-                _log.error(log_prefix + log_message)
+                _LOGGER.error(log_prefix + log_message)
                 raise ConfigEntryNotReady(log_message)
             else:
                 break
 
         if accounts is None:
             log_message = "Невозможно получить данные о лицевых счетах"
-            _log.error(log_prefix + log_message)
+            _LOGGER.error(log_prefix + log_message)
             raise ConfigEntryNotReady(log_message)
 
     except BaseException:
@@ -231,11 +233,11 @@ async def async_setup_entry(
 
     if not accounts:
         # Cancel setup because no accounts provided
-        _log.warning(log_prefix + "Лицевые счета не найдены")
+        _LOGGER.warning(log_prefix + "Лицевые счета не найдены")
         await api_object.async_close()
         return False
 
-    _log.debug(log_prefix + f"Найдено {len(accounts)} лицевых счетов")
+    _LOGGER.debug(log_prefix + f"Найдено {len(accounts)} лицевых счетов")
 
     api_objects: Dict[str, "GUKKrasnodarAPI"] = hass_data.setdefault(
         DATA_API_OBJECTS, {}
@@ -256,7 +258,7 @@ async def async_setup_entry(
     update_listener = config_entry.add_update_listener(async_reload_entry)
     hass_data.setdefault(DATA_UPDATE_LISTENERS, {})[entry_id] = update_listener
 
-    _log.debug(log_prefix + "Применение конфигурации успешно")
+    _LOGGER.debug(log_prefix + "Применение конфигурации успешно")
     return True
 
 
@@ -266,7 +268,7 @@ async def async_reload_entry(
 ) -> None:
     """Reload GUK Krasnodar entry"""
     log_prefix = _make_log_prefix(config_entry, "setup")
-    _log.info(log_prefix + "Перезагрузка интеграции")
+    _LOGGER.info(log_prefix + "Перезагрузка интеграции")
     await hass.config_entries.async_reload(config_entry.entry_id)
 
 
@@ -300,9 +302,9 @@ async def async_unload_entry(
         cancel_listener = hass.data[DATA_UPDATE_LISTENERS].pop(entry_id)
         cancel_listener()
 
-        _log.info(log_prefix + "Интеграция выгружена")
+        _LOGGER.info(log_prefix + "Интеграция выгружена")
 
     else:
-        _log.warning(log_prefix + "При выгрузке конфигурации произошла ошибка")
+        _LOGGER.warning(log_prefix + "При выгрузке конфигурации произошла ошибка")
 
     return unload_ok

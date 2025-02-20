@@ -55,7 +55,8 @@ guk_krasnodar:
 
 ```yaml
 alias: Отправка показаний ГУК Краснодар
-description: ""
+description: -|
+  Отправлять показания по воде в 12 часов каждый 18й день месяца
 trigger:
   - platform: time
     at: "12:00:00"
@@ -72,6 +73,29 @@ action:
         {{ states('sensor.pokazanya_schetchika_vody') | round(0) | int }}
       notification: true
 mode: single
+```
+
+## Исправение ошибки с сертификатом (SSL: CERTIFICATE_VERIFY_FAILED)
+
+При возникновении ошибки
+
+> ERROR (MainThread) [custom_components.guk_krasnodar.config_flow] Authentication error: LoginError('Ошибка авторизации ResponseError("Общая ошибка запроса: ClientConnectorCertificateErro
+r(ConnectionKey(host=\'lk.gukkrasnodar.ru\', port=443, is_ssl=True, ssl=True, proxy=None, proxy_auth=None, proxy_headers_hash=None), SSLCertVerificationError(1, \'[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: una
+ble to get local issuer certificate (_ssl.c:1018)\'))")')
+
+Необходимо добавить корневой сертификат, используемый сайтом [lk.gukkrasnodar.ru](https://lk.gukkrasnodar.ru). 
+
+На начало 2025 года это [GlobalSign](https://support.globalsign.com/ca-certificates/intermediate-certificates/alphassl-intermediate-certificates), непосредственно сертификат: 
+[GlobalSign GCC R6 AlphaSSL CA 2023](https://secure.globalsign.com/cacert/gsgccr6alphasslca2023.crt).
+
+Для Ubuntu/Debian, для установки выполнить на сервере:
+
+```shell
+curl https://secure.globalsign.com/cacert/gsgccr6alphasslca2023.crt -o gsgccr6alphasslca2023.crt
+openssl x509 -in gsgccr6alphasslca2023.crt -inform DER -out "GlobalSign GCC R6 AlphaSSL CA 2023.crt"
+sudo mkdir /usr/local/share/ca-certificates/extra
+sudo mv "GlobalSign GCC R6 AlphaSSL CA 2023.crt" "/usr/local/share/ca-certificates/extra/GlobalSign GCC R6 AlphaSSL CA 2023.crt"
+sudo update-ca-certificates
 ```
 
 ## API examples

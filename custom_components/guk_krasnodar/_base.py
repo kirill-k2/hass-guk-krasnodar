@@ -42,7 +42,7 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_USERNAME,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
@@ -52,8 +52,6 @@ from homeassistant.util import as_local, utcnow
 from ._util import mask_value, with_auto_auth
 from .const import (
     ATTRIBUTION_RU,
-    ATTR_ACCOUNT_CODE,
-    ATTR_ACCOUNT_ID,
     CONF_ACCOUNTS,
     CONF_DEV_PRESENTATION,
     CONF_NAME_FORMAT,
@@ -75,7 +73,7 @@ if TYPE_CHECKING:
     from .model import Account
     from homeassistant.helpers.entity_registry import RegistryEntry
 
-_log = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 _TGUKKrasnodarEntity = TypeVar("_TGUKKrasnodarEntity", bound="GUKKrasnodarEntity")
 
@@ -102,7 +100,7 @@ def make_common_async_setup_entry(
             f"[{mask_value(config_entry.data[CONF_USERNAME])}]"
             f"[{current_entity_platform.domain}][setup] "
         )
-        _log.debug(log_prefix + "Регистрация делегата обновлений")
+        _LOGGER.debug(log_prefix + "Регистрация делегата обновлений")
 
         await async_register_update_delegator(
             hass,
@@ -154,7 +152,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
     log_prefix_base = f"[{mask_value(config_entry.data[CONF_USERNAME])}]"
     refresh_log_prefix = log_prefix_base + "[refresh] "
 
-    _log.info(refresh_log_prefix + "Запуск обновления связанных с профилем данных")
+    _LOGGER.info(refresh_log_prefix + "Запуск обновления связанных с профилем данных")
 
     if not update_delegators:
         return
@@ -168,7 +166,9 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
     if dev_presentation:
         from pprint import pformat
 
-        _log.debug(dev_log_prefix + "Конечная конфигурация:\n" + pformat(final_config))
+        _LOGGER.debug(
+            dev_log_prefix + "Конечная конфигурация:\n" + pformat(final_config)
+        )
 
     tasks = []
 
@@ -176,7 +176,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
         try:
             return await update_task
         except BaseException as task_exception:
-            _log.exception(
+            _LOGGER.exception(
                 f"Error occurred during task execution: {repr(task_exception)}",
                 exc_info=task_exception,
             )
@@ -205,7 +205,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
                     platform_log_prefix_base + f"[{entity_cls.__name__}]"
                 )
                 if account_config[entity_cls.config_key] is False:
-                    _log.debug(
+                    _LOGGER.debug(
                         log_prefix_base + " Лицевой счёт пропущен согласно фильтрации"
                     )
                     continue
@@ -213,7 +213,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
                 if dev_presentation:
                     dev_key = (entity_cls, account.number)
                     if dev_key in DEV_CLASSES_PROCESSED:
-                        _log.debug(
+                        _LOGGER.debug(
                             cls_log_prefix_base
                             + "[dev] Пропущен лицевой счёт ({mask_username(account.code)}) по уникальности номера счёта"
                         )
@@ -223,7 +223,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
 
                 current_entities = entities.setdefault(entity_cls, {})
 
-                _log.debug(
+                _LOGGER.debug(
                     cls_log_prefix_base + "[update] Планирование процедуры обновления"
                 )
 
@@ -242,7 +242,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
                 )
 
     if tasks:
-        _log.info(
+        _LOGGER.info(
             refresh_log_prefix
             + "Выполняется действий по обновлению : "
             + str(len(tasks))
@@ -250,7 +250,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
         await asyncio.wait(tasks, return_when=asyncio.ALL_COMPLETED)
 
     else:
-        _log.warning(
+        _LOGGER.warning(
             refresh_log_prefix + "Отсутствуют подходящие платформы для конфигурации"
         )
 
@@ -304,11 +304,11 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
         account_object = self._account
 
         return {
-            "name": f"№ {account_object.number}",
+            "name": f"Лицевой счёт № {account_object.number}",
             "identifiers": {(DOMAIN, f"{account_object.code}")},
             "manufacturer": "GUK Krasnodar",
             "model": self.api_hostname,
-            "suggested_area": account_object.address,
+            # "suggested_area": account_object.address,
         }
 
     def _handle_dev_presentation(
@@ -361,7 +361,7 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
     #################################################################################
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the attribute(s) of the sensor"""
 
         attributes = {
@@ -369,12 +369,12 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
             **(self.sensor_related_attributes or {}),
         }
 
-        if ATTR_ACCOUNT_CODE not in attributes:
-            attributes[ATTR_ACCOUNT_CODE] = self._account.code
+        # if ATTR_ACCOUNT_CODE not in attributes:
+        #     attributes[ATTR_ACCOUNT_CODE] = self._account.code
 
         self._handle_dev_presentation(
             attributes,
-            (ATTR_ACCOUNT_CODE, ATTR_ACCOUNT_ID),
+            (),
         )
 
         return attributes
@@ -408,12 +408,12 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
     #################################################################################
 
     async def async_added_to_hass(self) -> None:
-        _log.info(self.log_prefix + "Adding to HomeAssistant")
+        _LOGGER.info(self.log_prefix + "Adding to HomeAssistant")
         self.updater_restart()
         self.register_supported_services()
 
     async def async_will_remove_from_hass(self) -> None:
-        _log.info(self.log_prefix + "Removing from HomeAssistant")
+        _LOGGER.info(self.log_prefix + "Removing from HomeAssistant")
         self.updater_stop()
 
         registry_entry: Optional["RegistryEntry"] = self.registry_entry
@@ -442,7 +442,7 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
 
     def updater_stop(self) -> None:
         if self._entity_updater is not None:
-            _log.debug(self.log_prefix + "Остановка планировщика обновлений")
+            _LOGGER.debug(self.log_prefix + "Остановка планировщика обновлений")
             self._entity_updater()
             self._entity_updater = None
 
@@ -454,10 +454,10 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
 
         async def _update_entity(*_):
             nonlocal self
-            _log.debug(log_prefix + "Выполнение запланированной задачи обновления")
+            _LOGGER.debug(log_prefix + "Выполнение запланированной задачи обновления")
             await self.async_update_ha_state(force_refresh=True)
 
-        _log.debug(
+        _LOGGER.debug(
             log_prefix + f"Starting updater "
             f"(interval: {scan_interval.total_seconds()} seconds, "
             f"next call: {as_local(utcnow()) + scan_interval})"
@@ -541,7 +541,11 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
             if result:
                 for service, schema in services.items():
                     service_name = "async_service_" + service
-                    _log.debug("Registering service: %s", service_name)
+                    _LOGGER.debug("Registering service: %s", service_name)
                     self.platform.async_register_entity_service(
-                        service, schema, service_name, features
+                        service,
+                        schema,
+                        service_name,
+                        features,
+                        supports_response=SupportsResponse.OPTIONAL,
                     )

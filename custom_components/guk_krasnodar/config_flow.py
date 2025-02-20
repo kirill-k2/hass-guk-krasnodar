@@ -148,7 +148,10 @@ class GUKKrasnodarConfigFlow(ConfigFlow, domain=DOMAIN):
                 data_schema=vol.Schema(
                     {
                         vol.Optional(CONF_ACCOUNTS): cv.multi_select(
-                            {account.code: account.code for account in self._accounts}
+                            {
+                                account.code: f"ЛС № {account.number}"
+                                for account in self._accounts
+                            }
                         )
                     }
                 ),

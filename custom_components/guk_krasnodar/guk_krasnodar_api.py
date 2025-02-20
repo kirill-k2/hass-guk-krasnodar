@@ -18,7 +18,7 @@ from .exceptions import (
     AccessDenied,
 )
 
-_log = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT: Final = aiohttp.ClientTimeout(total=30)
 
@@ -135,7 +135,7 @@ class GUKKrasnodarAPI:
             try:
                 json_data = json.loads(response_text)
             except json.JSONDecodeError as e:
-                _log.debug(f"[{response_status}] {response_text}")
+                _LOGGER.debug(f"[{response_status}] {response_text}")
                 raise ResponseError(
                     f"Ошибка разбора ответа: [{response_status}] {e.msg}"
                 )
@@ -146,12 +146,12 @@ class GUKKrasnodarAPI:
             if response_status == 200 and json_data.get("success", False) is True:
                 return json_data
             elif response_status == 400 or response_status == 401:
-                _log.warning(f"Ошибка доступа [{response_status}] {response_text}")
+                _LOGGER.warning(f"Ошибка доступа [{response_status}] {response_text}")
                 raise AccessDenied(
                     f"Ошибка доступа: [{response_status}] {json_data.get('code', None)}: {json_data.get('message', None)}"
                 )
             else:
-                _log.debug(f"[{response_status}] {response_text}")
+                _LOGGER.debug(f"[{response_status}] {response_text}")
                 raise ResponseError(
                     f"Ошибка сервера: [{response_status}] {json_data.get('code', None)}: {json_data.get('message', None)}"
                 )
@@ -187,7 +187,7 @@ class GUKKrasnodarAPI:
 
         token = response.get("token", None)
         if token is not None and token:
-            _log.info("Успешная авторизация")
+            _LOGGER.info("Успешная авторизация")
             self._token = token
         else:
             raise LoginError("Ошибка авторизации: нет токена")
@@ -202,7 +202,7 @@ class GUKKrasnodarAPI:
         )
 
         response = response.get("accounts", [])
-        _log.info(f"Список лицевых счетов получен ({len(response)})")
+        _LOGGER.info(f"Список лицевых счетов получен ({len(response)})")
         _accounts = [
             Account(
                 id=account["id_account"],
@@ -213,7 +213,7 @@ class GUKKrasnodarAPI:
             )
             for account in response
         ]
-        _log.debug(_accounts)
+        _LOGGER.debug(_accounts)
         return _accounts
 
     async def async_update_account_detail(self, account: Account) -> [Account]:
@@ -225,7 +225,7 @@ class GUKKrasnodarAPI:
         )
 
         response = response.get("info", [])
-        _log.info(
+        _LOGGER.info(
             f"Детали по счету {account.company_id} {account.id} получены ({len(response)})"
         )
         for detail in response:
@@ -233,7 +233,7 @@ class GUKKrasnodarAPI:
                 account.balance = float_or_none(detail["value"])
             elif FIELD_NAME_ACCOUNT_CHARGED.match(detail["name"]):
                 account.charged = float_or_none(detail["value"])
-        _log.debug(account)
+        _LOGGER.debug(account)
         return account
 
     async def async_meters(self, account: Account) -> [Meter]:
@@ -251,7 +251,7 @@ class GUKKrasnodarAPI:
             return int_or_none(m.group(1)), m.group(2)
 
         response = response.get("meter", [])
-        _log.info(f"Список счетчиков получен ({len(response)})")
+        _LOGGER.info(f"Список счетчиков получен ({len(response)})")
         _meters = [
             Meter(
                 id=meter["id_meter"],
@@ -264,7 +264,7 @@ class GUKKrasnodarAPI:
             )
             for meter in response
         ]
-        _log.debug(_meters)
+        _LOGGER.debug(_meters)
         return _meters
 
     async def async_send_measure(self, meter: Meter, value: int):
@@ -284,7 +284,7 @@ class GUKKrasnodarAPI:
         except SessionAPIException as e:
             raise ResponseError(f"Ошибка передачи показаний {str(e)}")
 
-        _log.info(f"Показания переданы. {meter.title}: {value}")
+        _LOGGER.info(f"Показания переданы. {meter.code}: {value}")
 
 
 async def async_push_measure(

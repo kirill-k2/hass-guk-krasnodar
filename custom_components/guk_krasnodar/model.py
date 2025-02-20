@@ -22,11 +22,11 @@ class Account:
     def code(self) -> str:
         return f"{self.company_id}_{self.id}"
 
-    def api_meters(self):
-        return self.api.async_meters(self)
+    async def api_meters(self):
+        return await self.api.async_meters(self)
 
-    def api_update_account_detail(self):
-        return self.api.async_update_account_detail(self)
+    async def api_update_account_detail(self):
+        return await self.api.async_update_account_detail(self)
 
 
 @dataclass
@@ -43,6 +43,6 @@ class Meter:
     def code(self) -> str:
         return self.id
 
-    def api_send_indication(self, indication: int | None):
-        if indication is not None:
-            self.account.api.async_send_measure(self, indication)
+    async def api_send_indication(self, indications: int | None):
+        if indications is not None:
+            await self.account.api.async_send_measure(self, value=indications)

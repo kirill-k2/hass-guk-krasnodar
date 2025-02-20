@@ -23,10 +23,10 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import ServiceResponse
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     STATE_UNKNOWN,
-    ATTR_CODE,
 )
 from homeassistant.helpers.typing import ConfigType
 
@@ -38,18 +38,13 @@ from ._base import (
 from .model import Account, Meter
 from ._util import with_auto_auth
 from .const import (
-    ATTR_ACCOUNT_CODE,
-    ATTR_ACCOUNT_COMPANY_ID,
-    ATTR_ACCOUNT_ID,
     ATTR_ACCOUNT_NUMBER,
     ATTR_ADDRESS,
-    ATTR_IGNORE_INDICATIONS,
     ATTR_METER_CODE,
-    ATTR_METER_DETAIL,
-    ATTR_METER_ID,
-    ATTR_METER_INFO,
-    ATTR_METER_LAST_INDICATION,
-    ATTR_METER_TITLE,
+    ATTR_DETAIL,
+    ATTR_INFO,
+    ATTR_LAST_INDICATION,
+    ATTR_TITLE,
     CONF_ACCOUNTS,
     CONF_METERS,
     DOMAIN,
@@ -63,16 +58,20 @@ from .const import (
     ATTR_SUCCESS,
     TYPE_ACCOUNT_RU,
     TYPE_METER_RU,
+    ATTR_BALANCE,
+    ATTR_CHARGED,
+    ATTR_LAST_INDICATION_DATE,
+    ATTR_INDICATION_ENTITY,
 )
 from .exceptions import SessionAPIException
 
-_log = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 PUSH_INDICATIONS_SCHEMA = vol.All(
     cv.make_entity_service_schema(
         {
             vol.Required(ATTR_INDICATIONS): cv.positive_int,
-            vol.Optional(ATTR_IGNORE_INDICATIONS, default=False): cv.boolean,
+            vol.Optional(ATTR_INDICATION_ENTITY): cv.comp_entity_ids_or_uuids,
             vol.Optional("notification"): lambda x: x,
         }
     ),
@@ -144,17 +143,16 @@ class GUKKrasnodarAccount(GUKKrasnodarSensor):
         account = self._account
 
         attributes = {
-            ATTR_ACCOUNT_ID: account.id,
-            ATTR_ACCOUNT_COMPANY_ID: account.company_id,
             ATTR_ACCOUNT_NUMBER: account.number,
             ATTR_ADDRESS: account.address,
-            ATTR_CODE: account.code,
+            ATTR_BALANCE: account.balance,
+            ATTR_CHARGED: account.charged,
         }
 
         self._handle_dev_presentation(
             attributes,
             (),
-            (ATTR_ADDRESS, ATTR_ACCOUNT_NUMBER, ATTR_ACCOUNT_ID, ATTR_ACCOUNT_CODE),
+            (ATTR_ACCOUNT_NUMBER, ATTR_ADDRESS),
         )
 
         return attributes
@@ -316,21 +314,20 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
         meter = self._meter
 
         attributes = {
-            ATTR_METER_ID: meter.id,
-            ATTR_ACCOUNT_CODE: meter.account.code,
-            ATTR_METER_TITLE: meter.title,
-            ATTR_METER_INFO: meter.info,
-            ATTR_METER_DETAIL: meter.detail,
-            ATTR_METER_LAST_INDICATION: meter.last_indication,
+            ATTR_TITLE: meter.title,
+            ATTR_INFO: meter.info,
+            ATTR_DETAIL: meter.detail.replace(", ", "\n"),
+            ATTR_LAST_INDICATION: meter.last_indication,
+            ATTR_LAST_INDICATION_DATE: meter.last_indications_date,
         }
 
         self._handle_dev_presentation(
             attributes,
             (),
             (
-                ATTR_METER_TITLE,
-                ATTR_METER_INFO,
-                ATTR_METER_DETAIL,
+                ATTR_TITLE,
+                ATTR_INFO,
+                ATTR_DETAIL,
             ),
         )
 
@@ -349,13 +346,13 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
     # Push service
     #################################################################################
 
-    async def async_service_push_indications(self, **call_data):
+    async def async_service_push_indications(self, **call_data) -> ServiceResponse:
         """
         Push indications entity service.
         :param call_data: Parameters for service call
         :return:
         """
-        _log.info(self.log_prefix + "Begin handling indications submission")
+        _LOGGER.info(self.log_prefix + "Begin handling indications submission")
 
         meter = self._meter
 
@@ -377,7 +374,7 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
             event_data[ATTR_INDICATIONS] = indication
 
             await with_auto_auth(
-                meter.account.api, meter.api_send_indication, value=indication
+                meter.account.api, meter.api_send_indication, indications=indication
             )
 
         except SessionAPIException as e:
@@ -386,7 +383,7 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
 
         except BaseException as e:
             event_data[ATTR_COMMENT] = "Unknown error: %r" % e
-            _log.error(event_data[ATTR_COMMENT])
+            _LOGGER.error(event_data[ATTR_COMMENT])
             raise
 
         else:
@@ -395,13 +392,16 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
             self.async_schedule_update_ha_state(force_refresh=True)
 
         finally:
-            _log.debug(self.log_prefix + "Indications push event: " + str(event_data))
+            _LOGGER.debug(
+                self.log_prefix + "Indications push event: " + str(event_data)
+            )
             self.hass.bus.async_fire(
                 event_type=DOMAIN + "_" + SERVICE_PUSH_INDICATIONS,
                 event_data=event_data,
             )
 
-            _log.info(self.log_prefix + "End handling indications submission")
+            _LOGGER.info(self.log_prefix + "End handling indications submission")
+            return event_data
 
 
 async_setup_entry = make_common_async_setup_entry(
