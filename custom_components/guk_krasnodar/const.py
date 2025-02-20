@@ -15,7 +15,6 @@ ATTR_INDICATION_ENTITY: Final = "indication_entity"
 ATTR_INFO: Final = "info"
 ATTR_LAST_INDICATION: Final = "last_indication"
 ATTR_LAST_INDICATION_DATE: Final = "last_indication_date"
-ATTR_METER_CODE: Final = "meter_code"
 ATTR_SUCCESS: Final = "success"
 ATTR_TITLE: Final = "title"
 

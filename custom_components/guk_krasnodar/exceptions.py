@@ -24,3 +24,7 @@ class AccessDenied(SessionAPIException):
 
 class NoAuthError(SessionAPIException):
     """Ошибка авторизации"""
+
+
+class InvalidValue(SessionAPIException):
+    """Неверное значение"""

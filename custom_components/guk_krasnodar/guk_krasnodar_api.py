@@ -16,6 +16,7 @@ from .exceptions import (
     ResponseTimeout,
     SessionAPIException,
     AccessDenied,
+    InvalidValue,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -38,6 +39,8 @@ def _aiohttp_create_session(*args, **kwargs):
 
 
 class GUKKrasnodarAPI:
+    """API для взаимодействия с ЛК ГУК Краснодар"""
+
     def __init__(
         self,
         username,
@@ -45,13 +48,13 @@ class GUKKrasnodarAPI:
         timeout: Union[
             SupportsInt, SupportsFloat, aiohttp.ClientTimeout
         ] = DEFAULT_TIMEOUT,
-        user_agent: str = "Mozilla/5.0",
-        base_url: str = API_URL,
+        user_agent: str = None,
+        base_url: str = None,
     ):
         self._username = username
         self._password = password
         self._timeout = timeout
-        self._user_agent = user_agent
+        self._user_agent = user_agent or "Mozilla/5.0"
         self._base_url = base_url or API_URL
 
         if not isinstance(timeout, aiohttp.ClientTimeout):
@@ -267,24 +270,28 @@ class GUKKrasnodarAPI:
         _LOGGER.debug(_meters)
         return _meters
 
-    async def async_send_measure(self, meter: Meter, value: int):
-        data = {
-            "id_company": meter.account.company_id,
-            "id_account": meter.account.id,
-            "id_meter": meter.id,
-            "value": value,
-            "volume": None,
-        }
-        try:
-            await self._async_post(
-                f"{self.base_url}/api/v1/user/account/meter/measure/set",
-                referer=f"{self.base_url}/cabinet/accounts/{meter.account.company_id}/{meter.account.id}/meters",
-                data=data,
-            )
-        except SessionAPIException as e:
-            raise ResponseError(f"Ошибка передачи показаний {str(e)}")
+    async def async_send_measure(self, meter: Meter, value: int | None):
+        _value = int_or_none(value)
+        if _value > 0:
+            data = {
+                "id_company": meter.account.company_id,
+                "id_account": meter.account.id,
+                "id_meter": meter.id,
+                "value": _value,
+                "volume": None,
+            }
+            try:
+                await self._async_post(
+                    f"{self.base_url}/api/v1/user/account/meter/measure/set",
+                    referer=f"{self.base_url}/cabinet/accounts/{meter.account.company_id}/{meter.account.id}/meters",
+                    data=data,
+                )
+            except SessionAPIException as e:
+                raise ResponseError(f"Ошибка передачи показаний {str(e)}")
 
-        _LOGGER.info(f"Показания переданы. {meter.code}: {value}")
+            _LOGGER.info(f"Показания переданы. {meter.code}: {_value}")
+        else:
+            raise InvalidValue(f"Неверное значение для передачи показаний {value}")
 
 
 async def async_push_measure(
@@ -294,6 +301,7 @@ async def async_push_measure(
     meter_title: str,
     meter_value: int,
 ):
+    """Пробник для тестирования и прямого использования API без HA"""
     async with GUKKrasnodarAPI(username=username, password=password) as api:
         await api.async_login()
 

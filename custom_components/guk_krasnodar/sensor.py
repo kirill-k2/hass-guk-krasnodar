@@ -40,7 +40,6 @@ from ._util import with_auto_auth
 from .const import (
     ATTR_ACCOUNT_NUMBER,
     ATTR_ADDRESS,
-    ATTR_METER_CODE,
     ATTR_DETAIL,
     ATTR_INFO,
     ATTR_LAST_INDICATION,
@@ -315,11 +314,16 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
 
         attributes = {
             ATTR_TITLE: meter.title,
-            ATTR_INFO: meter.info,
-            ATTR_DETAIL: meter.detail.replace(", ", "\n"),
+            ATTR_DETAIL: meter.detail,
             ATTR_LAST_INDICATION: meter.last_indication,
             ATTR_LAST_INDICATION_DATE: meter.last_indications_date,
         }
+
+        if isinstance(meter.info, list):
+            for idx, info in enumerate(meter.info):
+                attributes[f"{ATTR_INFO}_{idx+1}"] = info
+        else:
+            attributes[ATTR_INFO] = meter.info
 
         self._handle_dev_presentation(
             attributes,
@@ -327,6 +331,11 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
             (
                 ATTR_TITLE,
                 ATTR_INFO,
+                ATTR_INFO + "_1",
+                ATTR_INFO + "_2",
+                ATTR_INFO + "_3",
+                ATTR_INFO + "_4",
+                ATTR_INFO + "_5",
                 ATTR_DETAIL,
             ),
         )
@@ -352,18 +361,15 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
         :param call_data: Parameters for service call
         :return:
         """
-        _LOGGER.info(self.log_prefix + "Begin handling indications submission")
+        _LOGGER.info(self.log_prefix + "Начало отправки показаний")
 
         meter = self._meter
 
         if meter is None:
-            raise Exception("Meter is unavailable")
-
-        meter_code = meter.code
+            raise Exception("Счетчик не доступен")
 
         event_data = {
             ATTR_ENTITY_ID: self.entity_id,
-            ATTR_METER_CODE: meter_code,
             ATTR_SUCCESS: False,
             ATTR_INDICATIONS: None,
             ATTR_COMMENT: None,
@@ -373,34 +379,45 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
             indication = call_data[ATTR_INDICATIONS]
             event_data[ATTR_INDICATIONS] = indication
 
+            src_entity = call_data.get(ATTR_INDICATION_ENTITY, None)
+            if (
+                (not indication or indication <= 0)
+                and src_entity
+                and len(src_entity) == 1
+            ):
+                _LOGGER.debug(self.log_prefix + "Используется объект %s" % src_entity)
+                indication = self.hass.states.get(src_entity[0]).state
+                event_data[ATTR_INDICATIONS] = indication
+
+            indication = round(float(indication))
+            event_data[ATTR_INDICATIONS] = indication
+
             await with_auto_auth(
                 meter.account.api, meter.api_send_indication, indications=indication
             )
 
         except SessionAPIException as e:
-            event_data[ATTR_COMMENT] = "API error: %s" % e
+            event_data[ATTR_COMMENT] = "Ошибка API: %s" % e
             raise
 
         except BaseException as e:
-            event_data[ATTR_COMMENT] = "Unknown error: %r" % e
+            event_data[ATTR_COMMENT] = "Неизвестная ошибка: %r" % e
             _LOGGER.error(event_data[ATTR_COMMENT])
             raise
 
         else:
-            event_data[ATTR_COMMENT] = "Indications submitted successfully"
+            event_data[ATTR_COMMENT] = "Показания успешно отправлены"
             event_data[ATTR_SUCCESS] = True
             self.async_schedule_update_ha_state(force_refresh=True)
 
         finally:
-            _LOGGER.debug(
-                self.log_prefix + "Indications push event: " + str(event_data)
-            )
+            _LOGGER.debug(self.log_prefix + "Отправлено событие: " + str(event_data))
             self.hass.bus.async_fire(
                 event_type=DOMAIN + "_" + SERVICE_PUSH_INDICATIONS,
                 event_data=event_data,
             )
 
-            _LOGGER.info(self.log_prefix + "End handling indications submission")
+            _LOGGER.info(self.log_prefix + "Отправка показаний завершена.")
             return event_data
 
 

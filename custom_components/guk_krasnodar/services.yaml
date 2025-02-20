@@ -1,32 +1,23 @@
 push_indications:
-  name: 'Push indications'
-  description: 'Передать показания в личный кабинет'
+  name: 'Передача показаний'
+  description: 'Передать показания счётчика воды в личный кабинет'
   target:
     entity:
       integration: guk_krasnodar
       device_class: guk_krasnodar_meter
   fields:
     indications:
-      name: 'Indications'
-      description: 'Значение показаний БЕЗ десятичной части (до точки). 0 - использовать значение из объекта ниже'
+      name: 'Значение показаний'
+      description: 'Значение показаний БЕЗ десятичной части (до точки).'
       required: true
       advanced: false
       example: '123'
       selector:
         text:
           multiline: false
-    notification:
-      name: 'Notification'
-      description: 'Показывать уведомление при успешной передаче'
-      required: false
-      advanced: false
-      default: false
-      example: 'true'
-      selector:
-        boolean:
     indication_entity:
-      name: 'Indication Entity'
-      description: 'Объект, из которого будет взято значение для отправки'
+      name: 'Объект (метрика) для показаний'
+      description: 'Объект, из которого будет взято значение для отправки. Применяется если в значении показаний указан 0.'
       required: false
       advanced: false
       selector:

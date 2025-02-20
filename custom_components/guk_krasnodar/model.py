@@ -34,7 +34,7 @@ class Meter:
     id: str
     title: str
     detail: str = ""
-    info: str = ""
+    info: str | list[str] | None = None
     last_indication: int | None = None
     last_indications_date: str | None = None
     account: Account | None = None
