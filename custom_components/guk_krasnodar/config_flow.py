@@ -110,7 +110,7 @@ class GUKKrasnodarConfigFlow(ConfigFlow, domain=DOMAIN):
             password=user_input[CONF_PASSWORD],
         ) as api:
             try:
-                await api.login()
+                await api.async_login()
 
             except SessionAPIException as e:
                 _LOGGER.error(f"Authentication error: {repr(e)}")
@@ -121,7 +121,7 @@ class GUKKrasnodarConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
 
             try:
-                self._accounts = await api.accounts()
+                self._accounts = await api.async_accounts()
 
             except SessionAPIException as e:
                 _LOGGER.error(f"Request error: {repr(e)}")
@@ -206,7 +206,7 @@ class GUKKrasnodarOptionsFlow(OptionsFlow):
         api: "GUKKrasnodarAPI" = self.hass.data[DATA_API_OBJECTS][
             self.config_entry.entry_id
         ]
-        accounts = await api.accounts()
+        accounts = await api.async_accounts()
         account_codes = {
             account.code for account in accounts if account.code is not None
         }

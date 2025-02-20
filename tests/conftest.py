@@ -1,6 +1,7 @@
 """Fixtures for testing."""
 
 import json
+import logging
 from contextlib import contextmanager
 from http import HTTPStatus
 from typing import Final, Iterator
@@ -30,6 +31,8 @@ BASE_CONFIG: Final = {
     CONF_PASSWORD: "password",
     CONF_USER_AGENT: "TEST_UA",
 }
+
+logging.getLogger("custom_components.guk_krasnodar").setLevel(logging.DEBUG)
 
 
 @pytest.fixture(autouse=True)
@@ -87,6 +90,15 @@ def gukk_aioclient_mock(aioclient_mock: AiohttpClientMocker):
     return aioclient_mock
 
 
+@pytest.fixture
+def mock_account():
+    from guk_krasnodar.model import Account
+
+    yield Account(
+        id="12345", company_id="1", number="230123456", address="ул.Красная, д.1 кв.1"
+    )
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_runtest_setup():
     enable_socket()
@@ -94,7 +106,9 @@ def pytest_runtest_setup():
 
 
 @contextmanager
-def mock_raw_aiohttp_client(hass, gukk_aioclient_mock) -> Iterator[AiohttpClientMocker]:
+def mock_gukk_aiohttp_client(
+    hass, gukk_aioclient_mock
+) -> Iterator[AiohttpClientMocker]:
     def create_session(*args, **kwargs):
         session = gukk_aioclient_mock.create_session(hass.loop)
 
@@ -108,10 +122,6 @@ def mock_raw_aiohttp_client(hass, gukk_aioclient_mock) -> Iterator[AiohttpClient
 
     with (
         mock.patch(
-            "guk_krasnodar.guk_krasnodar_api._aiohttp_create_session",
-            side_effect=create_session,
-        ),
-        mock.patch(
             "custom_components.guk_krasnodar.guk_krasnodar_api._aiohttp_create_session",
             side_effect=create_session,
         ),
@@ -121,3 +131,9 @@ def mock_raw_aiohttp_client(hass, gukk_aioclient_mock) -> Iterator[AiohttpClient
         ),
     ):
         yield gukk_aioclient_mock
+
+
+# @contextmanager
+# def mock_gukk_api(hass, gukk_aioclient_mock) -> Iterator[GUKKrasnodarAPI]:
+#     with mock_gukk_aiohttp_client(hass, gukk_aioclient_mock):
+#         yield GUKKrasnodarAPI(username="username", password="password")

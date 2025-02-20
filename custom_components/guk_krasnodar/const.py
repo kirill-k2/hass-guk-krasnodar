@@ -20,8 +20,8 @@ ATTR_METER_LAST_INDICATION: Final = "meter_last_indication"
 ATTR_METER_TITLE: Final = "meter_title"
 ATTR_SUCCESS: Final = "success"
 
-DEFAULT_NAME_FORMAT_ACCOUNTS: Final = "{account_number} {type_ru_cap}"
-DEFAULT_NAME_FORMAT_METERS: Final = "{account_number} {type_ru_cap} {title}"
+DEFAULT_NAME_FORMAT_ACCOUNTS: Final = "{type_ru_cap} {account_number}"
+DEFAULT_NAME_FORMAT_METERS: Final = "{type_ru_cap} {account_number} {title}"
 DEFAULT_SCAN_INTERVAL: Final = 60 * 60 * 12  # 12 hour
 DEFAULT_USER_AGENT: Final = (
     "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0"
@@ -48,5 +48,8 @@ FORMAT_VAR_CODE: Final = "code"
 FORMAT_VAR_ID: Final = "id"
 FORMAT_VAR_TITLE: Final = "title"
 FORMAT_VAR_TYPE: Final = "type_ru"
+
+TYPE_ACCOUNT_RU = "лицевой счёт"
+TYPE_METER_RU = "счетчик"
 
 SUPPORTED_PLATFORMS: Final = ("sensor",)

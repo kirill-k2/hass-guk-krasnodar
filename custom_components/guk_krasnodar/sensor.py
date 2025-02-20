@@ -61,6 +61,8 @@ from .const import (
     ATTR_COMMENT,
     ATTR_INDICATIONS,
     ATTR_SUCCESS,
+    TYPE_ACCOUNT_RU,
+    TYPE_METER_RU,
 )
 from .exceptions import SessionAPIException
 
@@ -165,7 +167,7 @@ class GUKKrasnodarAccount(GUKKrasnodarSensor):
             FORMAT_VAR_ACCOUNT_NUMBER: str(account.number),
             FORMAT_VAR_ID: str(account.id),
             FORMAT_VAR_CODE: str(account.code),
-            FORMAT_VAR_TYPE: "лицевой счёт",
+            FORMAT_VAR_TYPE: TYPE_ACCOUNT_RU,
         }
 
     #################################################################################
@@ -196,11 +198,11 @@ class GUKKrasnodarAccount(GUKKrasnodarSensor):
     async def async_update_internal(self) -> None:
         account = self._account
         account_code = account.code
-        accounts = await account.api.accounts()
+        accounts = await account.api.async_accounts()
 
         for account in accounts:
             if account.code == account_code:
-                await account.api.update_account_detail(account)
+                await account.api_update_account_detail()
                 self._account = account
                 break
 
@@ -254,7 +256,7 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
         async_add_entities: Callable[[List[_TGUKKrasnodarEntity], bool], Any],
     ):
         new_meter_entities = []
-        meters = await account.api.meters(account)
+        meters = await account.api.async_meters(account)
 
         for meter in meters:
             entity_key = (account.code, meter.code)
@@ -276,7 +278,7 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
             async_add_entities(new_meter_entities, False)
 
     async def async_update_internal(self) -> None:
-        meters = await self._account.api.meters(self._account)
+        meters = await self._account.api.async_meters(self._account)
         meter_code = self._meter.code
         meter = next((m for m in meters if m.code == meter_code), None)
 
@@ -340,7 +342,7 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
         return {
             FORMAT_VAR_ID: meter.code or "<unknown>",
             FORMAT_VAR_TITLE: meter.title or "<unknown>",
-            FORMAT_VAR_TYPE: "счётчик",
+            FORMAT_VAR_TYPE: TYPE_METER_RU,
         }
 
     #################################################################################
@@ -374,7 +376,9 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
             indication = call_data[ATTR_INDICATIONS]
             event_data[ATTR_INDICATIONS] = indication
 
-            await with_auto_auth(meter.api, meter.api_send_indication, value=indication)
+            await with_auto_auth(
+                meter.account.api, meter.api_send_indication, value=indication
+            )
 
         except SessionAPIException as e:
             event_data[ATTR_COMMENT] = "API error: %s" % e

@@ -100,7 +100,7 @@ class GUKKrasnodarAPI:
     def base_url(self) -> str:
         return self._base_url
 
-    async def __request(
+    async def __async_request(
         self,
         url: str,
         referer: str = base_url,
@@ -162,20 +162,22 @@ class GUKKrasnodarAPI:
         except asyncio.TimeoutError:
             raise ResponseTimeout("Ошибка ожидания ответа от сервера")
 
-    async def _get(self, url, referer=None):
-        return await self.__request(url=url, referer=referer, method="GET")
+    async def _async_get(self, url, referer=None):
+        return await self.__async_request(url=url, referer=referer, method="GET")
 
-    async def _post(self, url, referer=None, data=None):
-        return await self.__request(url=url, referer=referer, data=data, method="POST")
+    async def _async_post(self, url, referer=None, data=None):
+        return await self.__async_request(
+            url=url, referer=referer, data=data, method="POST"
+        )
 
-    async def _login(self, login, password):
+    async def _async_login(self, login, password):
         self._token = None
         data = {
             "login": login,
             "password": password,
         }
         try:
-            response = await self._post(
+            response = await self._async_post(
                 f"{self.base_url}/api/v1/user/login",
                 referer=f"{self.base_url}/login",
                 data=data,
@@ -190,11 +192,11 @@ class GUKKrasnodarAPI:
         else:
             raise LoginError("Ошибка авторизации: нет токена")
 
-    async def login(self):
-        await self._login(self._username, self._password)
+    async def async_login(self):
+        await self._async_login(self._username, self._password)
 
-    async def accounts(self) -> list[Account]:
-        response = await self._get(
+    async def async_accounts(self) -> list[Account]:
+        response = await self._async_get(
             f"{self.base_url}/api/v1/user/accounts",
             referer=f"{self.base_url}/cabinet/accounts",
         )
@@ -214,9 +216,9 @@ class GUKKrasnodarAPI:
         _log.debug(_accounts)
         return _accounts
 
-    async def update_account_detail(self, account: Account) -> [Account]:
+    async def async_update_account_detail(self, account: Account) -> [Account]:
         data = {"id_company": account.company_id, "id_account": account.id}
-        response = await self._post(
+        response = await self._async_post(
             f"{self.base_url}/api/v1/user/account/info/extend",
             referer=f"{self.base_url}/cabinet/accounts",
             data=data,
@@ -239,9 +241,9 @@ class GUKKrasnodarAPI:
             return None
         return int_or_none(m.group(1))
 
-    async def meters(self, account: Account) -> [Meter]:
+    async def async_meters(self, account: Account) -> [Meter]:
         data = {"id_company": account.company_id, "id_account": account.id}
-        response = await self._post(
+        response = await self._async_post(
             f"{self.base_url}/api/v1/user/account/meters",
             referer=f"{self.base_url}/cabinet/accounts/{account.company_id}/{account.id}/meters",
             data=data,
@@ -263,7 +265,7 @@ class GUKKrasnodarAPI:
         _log.debug(_meters)
         return _meters
 
-    async def send_measure(self, meter: Meter, value: int):
+    async def async_send_measure(self, meter: Meter, value: int):
         data = {
             "id_company": meter.account.company_id,
             "id_account": meter.account.id,
@@ -272,7 +274,7 @@ class GUKKrasnodarAPI:
             "volume": None,
         }
         try:
-            await self._post(
+            await self._async_post(
                 f"{self.base_url}/api/v1/user/account/meter/measure/set",
                 referer=f"{self.base_url}/cabinet/accounts/{meter.account.company_id}/{meter.account.id}/meters",
                 data=data,
@@ -283,20 +285,20 @@ class GUKKrasnodarAPI:
         _log.info(f"Показания переданы. {meter.title}: {value}")
 
 
-async def push_measure(
+async def async_push_measure(
     username: str,
     password: str,
     account_number: str,
     meter_title: str,
     meter_value: int,
 ):
-    async with GUKKrasnodarAPI(username=username, password=password) as session:
-        await session.login()
+    async with GUKKrasnodarAPI(username=username, password=password) as api:
+        await api.async_login()
 
         account = next(
             (
                 account
-                for account in await session.accounts()
+                for account in await api.async_accounts()
                 if account.number == account_number
             ),
             None,
@@ -307,7 +309,7 @@ async def push_measure(
         meter = next(
             (
                 meter
-                for meter in await session.meters(account=account)
+                for meter in await api.async_meters(account=account)
                 if meter.title == meter_title
             ),
             None,
@@ -315,4 +317,4 @@ async def push_measure(
         if meter is None:
             raise exception(f"Ошибка: счетчик {meter_title} не найден")
 
-        await session.send_measure(meter=meter, value=meter_value)
+        await api.async_send_measure(meter=meter, value=meter_value)

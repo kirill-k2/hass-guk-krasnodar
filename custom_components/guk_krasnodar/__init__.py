@@ -20,7 +20,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
 from homeassistant.helpers import config_validation as cv
 
 from ._base import UpdateDelegatorsDataType
@@ -195,11 +195,12 @@ async def async_setup_entry(
 
     try:
         try:
-            await api_object.login()
+            await api_object.async_login()
 
         except SessionAPIException as e:
-            _log.error(log_prefix + "Невозможно выполнить авторизацию: " + repr(e))
-            raise ConfigEntryNotReady
+            log_message = log_prefix + "Ошибка авторизации: " + repr(e)
+            _log.error(log_message)
+            raise ConfigEntryAuthFailed(log_message)
 
         accounts = None
         for i in range(3):
@@ -207,7 +208,7 @@ async def async_setup_entry(
             await asyncio.sleep(1)
 
             try:
-                accounts = await api_object.accounts()
+                accounts = await api_object.async_accounts()
             except EmptyResponse:
                 _log.warning(
                     log_prefix + "Получен пустой ответ на запрос лицевых счетов"
@@ -285,6 +286,10 @@ async def async_unload_entry(
         hass.config_entries.async_forward_entry_unload(config_entry, domain)
         for domain in update_delegators.keys()
     ]
+
+    # Unload services
+    for service in hass.services.async_services_for_domain(DOMAIN):
+        tasks.append(hass.services.async_remove(DOMAIN, service))
 
     unload_ok = all(await asyncio.gather(*tasks))
 

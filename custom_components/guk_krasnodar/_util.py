@@ -68,7 +68,7 @@ async def with_auto_auth(
         return await async_getter(*args, **kwargs)
     # @todo уточнить ошибки протухания токена - вероятно, в отдельный эксепшн
     except AccessDenied or LoginError:
-        await api.login()
+        await api.async_login()
         return await async_getter(*args, **kwargs)
 
 

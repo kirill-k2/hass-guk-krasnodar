@@ -13,7 +13,7 @@ class Account:
     number: str
     address: str = ""
     balance: float | None = None
-    charge: float | None = None
+    charged: float | None = None
     api: GUKKrasnodarAPI | None = None
 
     @property
@@ -21,10 +21,10 @@ class Account:
         return f"{self.company_id}_{self.id}"
 
     def api_meters(self):
-        return self.api.meters(self)
+        return self.api.async_meters(self)
 
     def api_update_account_detail(self):
-        return self.api.update_account_detail(self)
+        return self.api.async_update_account_detail(self)
 
 
 @dataclass
@@ -40,10 +40,6 @@ class Meter:
     def code(self) -> str:
         return self.id
 
-    @property
-    def api(self) -> GUKKrasnodarAPI:
-        return self.account.api if self.account else None
-
     def api_send_indication(self, indication: int | None):
         if indication is not None:
-            self.account.api.send_measure(self, indication)
+            self.account.api.async_send_measure(self, indication)

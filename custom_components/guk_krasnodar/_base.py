@@ -186,7 +186,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
     account_default_config = final_config[CONF_DEFAULT]
 
     api: "GUKKrasnodarAPI" = hass.data[DATA_API_OBJECTS][entry_id]
-    accounts = await with_auto_auth(api, api.accounts)
+    accounts = await with_auto_auth(api, api.async_accounts)
 
     for account in accounts:
         account_config = accounts_config.get(account.code)
@@ -213,11 +213,11 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
                     continue
 
                 if dev_presentation:
-                    dev_key = (entity_cls, account.company_id)
+                    dev_key = (entity_cls, account.number)
                     if dev_key in DEV_CLASSES_PROCESSED:
                         _log.debug(
                             cls_log_prefix_base
-                            + "[dev] Пропущен лицевой счёт ({mask_username(account.code)}) по уникальности типа"
+                            + "[dev] Пропущен лицевой счёт ({mask_username(account.code)}) по уникальности номера счёта"
                         )
                         continue
 
@@ -310,7 +310,7 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
             "identifiers": {(DOMAIN, f"{account_object.code}")},
             "manufacturer": "GUK Krasnodar",
             "model": self.api_hostname,
-            # "suggested_area": account_object.address,
+            "suggested_area": account_object.address,
         }
 
     def _handle_dev_presentation(
