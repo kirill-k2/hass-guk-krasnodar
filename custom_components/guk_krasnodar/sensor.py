@@ -71,10 +71,8 @@ PUSH_INDICATIONS_SCHEMA = vol.All(
         {
             vol.Required(ATTR_INDICATIONS): cv.positive_int,
             vol.Optional(ATTR_INDICATION_ENTITY): cv.comp_entity_ids_or_uuids,
-            vol.Optional("notification"): lambda x: x,
         }
     ),
-    cv.deprecated("notification"),
 )
 
 SERVICE_PUSH_INDICATIONS: Final = "push_indications"

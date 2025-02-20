@@ -1,7 +1,7 @@
 # ЛК ГУК Краснодар для Home Assistant
 
 Предоставление информации о текущем состоянии ваших лицевых счетов в ЛК ГУК Краснодар.
-Передача показаний по счётчикам.
+Передача показаний по счётчикам воды.
 
 GUK Krasnodar personal cabinet information and status retrieval, with meter indications submission capabilities.
 
@@ -10,7 +10,7 @@ GUK Krasnodar personal cabinet information and status retrieval, with meter indi
 ## Установка
 
 1. Установите как custom_components
-1. Настройте yaml
+1. Настройте yaml или добавить интеграцию через интерфейс 
 1. Перезапустите Home Assistant
 
 ### Пример конфигурации YAML
@@ -75,20 +75,24 @@ action:
 mode: single
 ```
 
-## Исправение ошибки с сертификатом (SSL: CERTIFICATE_VERIFY_FAILED)
+Так же через интерфейсе можно выбрать доступные счетчики воды из выпадающего списка. В этом случае indications необходимо указать как 0.
 
-При возникновении ошибки
+## Исправение ошибки с сертификатом
+
+При возникновении ошибки `SSL: CERTIFICATE_VERIFY_FAILED`:
 
 > ERROR (MainThread) [custom_components.guk_krasnodar.config_flow] Authentication error: LoginError('Ошибка авторизации ResponseError("Общая ошибка запроса: ClientConnectorCertificateErro
 r(ConnectionKey(host=\'lk.gukkrasnodar.ru\', port=443, is_ssl=True, ssl=True, proxy=None, proxy_auth=None, proxy_headers_hash=None), SSLCertVerificationError(1, \'[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: una
 ble to get local issuer certificate (_ssl.c:1018)\'))")')
 
-Необходимо добавить корневой сертификат, используемый сайтом [lk.gukkrasnodar.ru](https://lk.gukkrasnodar.ru). 
+Необходимо в систему добавить корневой сертификат, используемый сайтом [lk.gukkrasnodar.ru](https://lk.gukkrasnodar.ru). 
 
-На начало 2025 года это [GlobalSign](https://support.globalsign.com/ca-certificates/intermediate-certificates/alphassl-intermediate-certificates), непосредственно сертификат: 
-[GlobalSign GCC R6 AlphaSSL CA 2023](https://secure.globalsign.com/cacert/gsgccr6alphasslca2023.crt).
+На начало 2025 года это [GlobalSign](https://support.globalsign.com/ca-certificates/intermediate-certificates/alphassl-intermediate-certificates), 
+непосредственно сертификат доступен по ссылке: [GlobalSign GCC R6 AlphaSSL CA 2023](https://secure.globalsign.com/cacert/gsgccr6alphasslca2023.crt).
 
-Для Ubuntu/Debian, для установки выполнить на сервере:
+### Ubuntu/Debian
+
+Для установки корневого сертификата выполнить на сервере:
 
 ```shell
 curl https://secure.globalsign.com/cacert/gsgccr6alphasslca2023.crt -o gsgccr6alphasslca2023.crt
@@ -96,6 +100,20 @@ openssl x509 -in gsgccr6alphasslca2023.crt -inform DER -out "GlobalSign GCC R6 A
 sudo mkdir /usr/local/share/ca-certificates/extra
 sudo mv "GlobalSign GCC R6 AlphaSSL CA 2023.crt" "/usr/local/share/ca-certificates/extra/GlobalSign GCC R6 AlphaSSL CA 2023.crt"
 sudo update-ca-certificates
+```
+
+### Docker Compose
+
+1. Сохранить `sgccr6alphasslca2023.crt` в папке `./homeassistant/certs`
+2. Исправить `docker-compose.yml` по образу и подобию:
+
+```yml
+  homeassistant:
+    volumes:
+      - ./homeassistant/certs:/usr/local/share/ca-certificates/extra:ro
+    entrypoint:
+      [ "sh", "-c", "([ ! -f /etc/ssl/certs/.updated ] && cat /usr/local/share/ca-certificates/extra/*.crt >> /etc/ssl/certs/ca-certificates.crt && touch /etc/ssl/certs/.updated ); /init" ] 
+    ...
 ```
 
 ## API examples
