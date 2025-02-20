@@ -67,10 +67,9 @@ from .const import (
     FORMAT_VAR_CODE,
     FORMAT_VAR_ID,
     SUPPORTED_PLATFORMS,
-    API_URL,
     FORMAT_VAR_ACCOUNT_NUMBER,
 )
-from .session_api import SessionAPI
+from .guk_krasnodar_api import GUKKrasnodarAPI, API_URL
 
 if TYPE_CHECKING:
     from .model import Account
@@ -186,7 +185,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
     accounts_config = final_config.get(CONF_ACCOUNTS) or {}
     account_default_config = final_config[CONF_DEFAULT]
 
-    api: "SessionAPI" = hass.data[DATA_API_OBJECTS][entry_id]
+    api: "GUKKrasnodarAPI" = hass.data[DATA_API_OBJECTS][entry_id]
     accounts = await with_auto_auth(api, api.accounts)
 
     for account in accounts:
@@ -214,7 +213,7 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
                     continue
 
                 if dev_presentation:
-                    dev_key = (entity_cls, account.provider_type)
+                    dev_key = (entity_cls, account.company_id)
                     if dev_key in DEV_CLASSES_PROCESSED:
                         _log.debug(
                             cls_log_prefix_base

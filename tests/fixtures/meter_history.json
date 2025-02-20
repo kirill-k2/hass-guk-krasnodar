@@ -1,0 +1,104 @@
+{
+  "success": true,
+  "message_after": null,
+  "meter_measure_history": {
+    "header": [
+      {
+        "name": "Дата показаний",
+        "index": "1",
+        "value": "field_order",
+        "property": "date",
+        "sortable": "true"
+      },
+      {
+        "name": "Счетчик",
+        "index": "2",
+        "value": "name",
+        "property": null,
+        "sortable": "true"
+      },
+      {
+        "name": "Показание",
+        "index": "3",
+        "value": "value",
+        "property": null,
+        "sortable": "false"
+      },
+      {
+        "name": "Объем",
+        "index": "4",
+        "value": "volume",
+        "property": null,
+        "sortable": "false"
+      },
+      {
+        "name": "Период учета",
+        "index": "5",
+        "value": "period_name",
+        "property": null,
+        "sortable": "false"
+      }
+    ],
+    "default": {
+      "sort_by": "field_order",
+      "descending": "true",
+      "total_items": "5",
+      "rows_per_page": "50"
+    },
+    "meter_name": [
+      {
+        "icon": null,
+        "name": "ИПУ по ХВС (78901)",
+        "id_meter": "67890",
+        "field_order": "1"
+      }
+    ],
+    "meter_measure": [
+      {
+        "date": "18.02.2025",
+        "icon": null,
+        "info": "Объем:10. Период учета: Февраль 2025",
+        "name": "ИПУ по ХВС (78901)",
+        "value": "123",
+        "volume": "10",
+        "id_meter": "67890",
+        "field_order": "1",
+        "period_name": "Февраль 2025"
+      },
+      {
+        "date": "20.01.2025",
+        "icon": null,
+        "info": "Объем:10. Период учета: Январь 2025",
+        "name": "ИПУ по ХВС (78901)",
+        "value": "113",
+        "volume": "10",
+        "id_meter": "67890",
+        "field_order": "3",
+        "period_name": "Январь 2025"
+      },
+      {
+        "date": "18.12.2024",
+        "icon": null,
+        "info": "Объем:3. Период учета: Декабрь 2024",
+        "name": "ИПУ по ХВС (78901)",
+        "value": "103",
+        "volume": "3",
+        "id_meter": "67890",
+        "field_order": "4",
+        "period_name": "Декабрь 2024"
+      },
+      {
+        "date": "20.08.2024",
+        "icon": null,
+        "info": "Объем:1. Период учета: Август 2024",
+        "name": "ИПУ по ХВС (78901)",
+        "value": "100",
+        "volume": "1",
+        "id_meter": "67890",
+        "field_order": "5",
+        "period_name": "Август 2024"
+      }
+    ],
+    "count_meter_measure": "5"
+  }
+}

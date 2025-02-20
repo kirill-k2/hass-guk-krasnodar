@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "accounts": [
+    {
+      "inn": "2311104687",
+      "status": 2,
+      "account": "230123456",
+      "address": "ул.Красная, д.1 кв.1",
+      "id_account": 12345,
+      "id_company": 1,
+      "status_text": "Подтверждено",
+      "company_name": "ООО \"ГУК-Краснодар\"",
+      "company_full_name": "Общество с ограниченной ответственностью \"Городская управляющая компания - Краснодар\"",
+      "response_not_reading": 0
+    }
+  ]
+}

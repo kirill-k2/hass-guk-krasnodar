@@ -1,9 +1,6 @@
-import re
 from typing import Final
 
 DOMAIN: Final = "guk_krasnodar"
-
-API_URL: Final = "https://lk.gukkrasnodar.ru"
 
 ATTRIBUTION_RU: Final = "Данные получены с %s"
 
@@ -14,7 +11,7 @@ ATTR_ACCOUNT_NUMBER: Final = "account_number"
 ATTR_ADDRESS: Final = "address"
 ATTR_COMMENT: Final = "comment"
 ATTR_IGNORE_INDICATIONS: Final = "ignore_indications"
-ATTR_INDICATION: Final = "indication"
+ATTR_INDICATIONS: Final = "indication"
 ATTR_METER_CODE: Final = "meter_code"
 ATTR_METER_DETAIL: Final = "meter_detail"
 ATTR_METER_ID: Final = "meter_id"
@@ -23,8 +20,8 @@ ATTR_METER_LAST_INDICATION: Final = "meter_last_indication"
 ATTR_METER_TITLE: Final = "meter_title"
 ATTR_SUCCESS: Final = "success"
 
-DEFAULT_NAME_FORMAT_ACCOUNTS: Final = "{account_number} {type_cap}"
-DEFAULT_NAME_FORMAT_METERS: Final = "{account_number} {type_cap} {title}"
+DEFAULT_NAME_FORMAT_ACCOUNTS: Final = "{account_number} {type_ru_cap}"
+DEFAULT_NAME_FORMAT_METERS: Final = "{account_number} {type_ru_cap} {title}"
 DEFAULT_SCAN_INTERVAL: Final = 60 * 60 * 12  # 12 hour
 DEFAULT_USER_AGENT: Final = (
     "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0"
@@ -50,14 +47,6 @@ FORMAT_VAR_ACCOUNT_NUMBER: Final = "account_number"
 FORMAT_VAR_CODE: Final = "code"
 FORMAT_VAR_ID: Final = "id"
 FORMAT_VAR_TITLE: Final = "title"
-FORMAT_VAR_TYPE: Final = "type"
-
-FIELD_DETAIL_METRIC_INDICATION: Final = re.compile(
-    "Последнее показание (\\d+) от (.+)г"
-)
-FIELD_NAME_ACCOUNT_CHARGED: Final = re.compile(
-    "Начисление за (.+) \\(основные услуги\\)"
-)
-FIELD_NAME_ACCOUNT_DEBT: Final = re.compile("Задолженность \\(основные услуги\\)")
+FORMAT_VAR_TYPE: Final = "type_ru"
 
 SUPPORTED_PLATFORMS: Final = ("sensor",)

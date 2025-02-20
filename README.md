@@ -50,33 +50,38 @@ guk_krasnodar:
     meters: true | false
 ```
 
+## Сервис отправки показаний
+
+```yaml
+alias: Отправка показаний ГУК Краснодар
+description: ""
+trigger:
+  - platform: time
+    at: "12:00:00"
+condition:
+  - condition: template
+    value_template: |
+      {{ now().day == 18 }}
+action:
+  - service: guk_krasnodar.push_indications
+    target:
+      entity_id: sensor.guk_krasnodar_1_12345_meter_67890
+    data:
+      indications: |
+        {{ states('sensor.pokazanya_schetchika_vody') | round(0) | int }}
+      notification: true
+mode: single
+```
+
 ## API examples
 
 ### Accounts
 
 `GET https://lk.gukkrasnodar.ru/api/v1/user/accounts`
 
-```json
-{
-  "success": true,
-  "accounts": [
-    {
-      "inn": "2311104687",
-      "status": 2,
-      "account": "230123456",
-      "address": "ул.Красная, д.1 кв.1",
-      "id_account": 12345,
-      "id_company": 1,
-      "status_text": "Подтверждено",
-      "company_name": "ООО \"ГУК-Краснодар\"",
-      "company_full_name": "Общество с ограниченной ответственностью \"Городская управляющая компания - Краснодар\"",
-      "response_not_reading": 0
-    }
-  ]
-}
-```
+[accounts.json](tests/fixtures/accounts.json)
 
-### Account
+### Account Details
 
 `POST https://lk.gukkrasnodar.ru/api/v1/user/account/info/extend`
 
@@ -87,73 +92,7 @@ guk_krasnodar:
 }
 ```
 
-```json
-{
-  "info": [
-    {
-      "name": "Лицевой счет",
-      "value": "230123456",
-      "field_order": "1"
-    },
-    {
-      "name": "Адрес",
-      "value": "ул.Красная, д.1 кв.1",
-      "field_order": "2"
-    },
-    {
-      "name": "Оплачиваемая площадь",
-      "value": "99.99",
-      "field_order": "3"
-    },
-    {
-      "name": "Кол-во чел. на л/с",
-      "field_order": "4"
-    },
-    {
-      "name": "Задолженность (основные услуги)",
-      "value": "1234.56",
-      "field_order": "5"
-    },
-    {
-      "name": "Начисление за Февраль 2025 (основные услуги)",
-      "value": "6543.21",
-      "field_order": "7"
-    }
-  ],
-  "bills": [
-    {
-      "name": "Основные услуги",
-      "index": "1",
-      "value": "BillModule"
-    }
-  ],
-  "periods": [
-    {
-      "year": "2025",
-      "month": "1",
-      "period": "24301",
-      "month_name": "Январь",
-      "period_name": "Январь 2025"
-    },
-    ...
-    {
-      "year": "2008",
-      "month": "1",
-      "period": "24097",
-      "month_name": "Январь",
-      "period_name": "Январь 2008"
-    }
-  ],
-  "success": true,
-  "message_after": {
-    "icon": true,
-    "type": "info",
-    "title": null,
-    "value": "* Для просмотра квитанции в формате PDF (Adobe Portable Document Format) Вам понадобится программа Adobe® Acrobat® Reader (Программа распространяется бесплатно) Если на Вашем компьютере эта программа не установлена, Вы можете <a href=\"https://get.adobe.com/ru/reader/\" target=\"blank\">загрузить ее с официального сайта Adobe Systems Inc.</a>"
-  },
-  "show_payonline": false
-}
-```
+[account_detail.json](tests/fixtures/account_detail.json)
 
 ### Meter
 
@@ -166,32 +105,7 @@ guk_krasnodar:
 }
 ```
 
-```json
-{
-  "meter": [
-    {
-      "info": [
-        "Состояние: В работе",
-        "Дата следующей поверки: 01.01.2099",
-        "Модель: Информация отсутствует Производитель: Не указан",
-        "Показания переданы: Да. Расчетный объем: 12."
-      ],
-      "title": "1.ИПУ по ХВС (78901)",
-      "detail": "Последнее показание 123 от 18.02.2025г.",
-      "capacity": "5",
-      "id_meter": "67890",
-      "precision": "3"
-    }
-  ],
-  "success": true,
-  "volume_allow": false,
-  "message_after": null,
-  "accept_measure_set": {
-    "accept": true,
-    "message": null
-  }
-}
-```
+[meters.json](tests/fixtures/meters.json)
 
 ### Meter history
 
@@ -214,114 +128,11 @@ guk_krasnodar:
 }
 ```
 
-```json
-{
-  "success": true,
-  "message_after": null,
-  "meter_measure_history": {
-    "header": [
-      {
-        "name": "Дата показаний",
-        "index": "1",
-        "value": "field_order",
-        "property": "date",
-        "sortable": "true"
-      },
-      {
-        "name": "Счетчик",
-        "index": "2",
-        "value": "name",
-        "property": null,
-        "sortable": "true"
-      },
-      {
-        "name": "Показание",
-        "index": "3",
-        "value": "value",
-        "property": null,
-        "sortable": "false"
-      },
-      {
-        "name": "Объем",
-        "index": "4",
-        "value": "volume",
-        "property": null,
-        "sortable": "false"
-      },
-      {
-        "name": "Период учета",
-        "index": "5",
-        "value": "period_name",
-        "property": null,
-        "sortable": "false"
-      }
-    ],
-    "default": {
-      "sort_by": "field_order",
-      "descending": "true",
-      "total_items": "5",
-      "rows_per_page": "50"
-    },
-    "meter_name": [
-      {
-        "icon": null,
-        "name": "ИПУ по ХВС (78901)",
-        "id_meter": "67890",
-        "field_order": "1"
-      }
-    ],
-    "meter_measure": [
-      {
-        "date": "18.02.2025",
-        "icon": null,
-        "info": "Объем:10. Период учета: Февраль 2025",
-        "name": "ИПУ по ХВС (78901)",
-        "value": "123",
-        "volume": "10",
-        "id_meter": "67890",
-        "field_order": "1",
-        "period_name": "Февраль 2025"
-      },
-      {
-        "date": "20.01.2025",
-        "icon": null,
-        "info": "Объем:10. Период учета: Январь 2025",
-        "name": "ИПУ по ХВС (78901)",
-        "value": "113",
-        "volume": "10",
-        "id_meter": "67890",
-        "field_order": "3",
-        "period_name": "Январь 2025"
-      },
-      {
-        "date": "18.12.2024",
-        "icon": null,
-        "info": "Объем:3. Период учета: Декабрь 2024",
-        "name": "ИПУ по ХВС (78901)",
-        "value": "103",
-        "volume": "3",
-        "id_meter": "67890",
-        "field_order": "4",
-        "period_name": "Декабрь 2024"
-      },
-      {
-        "date": "20.08.2024",
-        "icon": null,
-        "info": "Объем:1. Период учета: Август 2024",
-        "name": "ИПУ по ХВС (78901)",
-        "value": "100",
-        "volume": "1",
-        "id_meter": "67890",
-        "field_order": "5",
-        "period_name": "Август 2024"
-      }
-    ],
-    "count_meter_measure": "5"
-  }
-}
-```
+[meter_history.json](tests/fixtures/meter_history.json)
+
 
 ## Credits
 
-- [alryaz/hass-tns-energo](https://github.com/alryaz/hass-tns-energo) за примеры реализации взаимодействия и базовые
+- [alryaz/hass-tns-energo](https://github.com/alryaz/hass-tns-energo) - за примеры реализации взаимодействия и базовые
   функции HA
+- ГУК Краснодар - за адекватный публичный API

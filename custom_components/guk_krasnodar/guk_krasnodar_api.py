@@ -1,27 +1,43 @@
 import asyncio
 import json
 import logging
+import re
 from logging import exception
-from typing import Any, Union, SupportsInt, SupportsFloat, Final, Optional
+from typing import Any, Union, SupportsInt, SupportsFloat, Final
 
 import aiohttp
 
 from .model import Account, Meter
 from ._util import float_or_none, int_or_none
-from .const import (
-    API_URL,
-    FIELD_NAME_ACCOUNT_DEBT,
-    FIELD_NAME_ACCOUNT_CHARGED,
-    FIELD_DETAIL_METRIC_INDICATION,
+from .exceptions import (
+    ResponseError,
+    LoginError,
+    EmptyResponse,
+    ResponseTimeout,
+    SessionAPIException,
+    AccessDenied,
 )
-from .exceptions import ResponseError, LoginError, EmptyResponse, ResponseTimeout
 
 _log = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT: Final = aiohttp.ClientTimeout(total=30)
 
+FIELD_DETAIL_METRIC_INDICATION: Final = re.compile(
+    "Последнее показание (\\d+) от (.+)г"
+)
+FIELD_NAME_ACCOUNT_CHARGED: Final = re.compile(
+    "Начисление за (.+) \\(основные услуги\\)"
+)
+FIELD_NAME_ACCOUNT_DEBT: Final = re.compile("Задолженность \\(основные услуги\\)")
 
-class SessionAPI:
+API_URL: Final = "https://lk.gukkrasnodar.ru"
+
+
+def _aiohttp_create_session(*args, **kwargs):
+    return aiohttp.ClientSession(*args, **kwargs)
+
+
+class GUKKrasnodarAPI:
     def __init__(
         self,
         username,
@@ -29,11 +45,14 @@ class SessionAPI:
         timeout: Union[
             SupportsInt, SupportsFloat, aiohttp.ClientTimeout
         ] = DEFAULT_TIMEOUT,
-        user_agent: str = "okhttp/3.7.0",
+        user_agent: str = "Mozilla/5.0",
+        base_url: str = API_URL,
     ):
         self._username = username
         self._password = password
-        self._token = None
+        self._timeout = timeout
+        self._user_agent = user_agent
+        self._base_url = base_url or API_URL
 
         if not isinstance(timeout, aiohttp.ClientTimeout):
             if isinstance(timeout, SupportsInt):
@@ -43,13 +62,12 @@ class SessionAPI:
             else:
                 raise TypeError("invalid argument type for timeout provided")
 
-        self._session = aiohttp.ClientSession(
+        self._session = _aiohttp_create_session(
             timeout=timeout,
             cookie_jar=aiohttp.CookieJar(),
-            headers={aiohttp.hdrs.USER_AGENT: user_agent},
+            headers={aiohttp.hdrs.USER_AGENT: self._user_agent},
         )
-
-        self._main_account: Optional[Account] = None
+        self._token = None
 
     async def __aenter__(self):
         return self
@@ -63,8 +81,24 @@ class SessionAPI:
             await self._session.close()
 
     @property
+    def username(self):
+        return self._username
+
+    @property
+    def password(self):
+        return self._password
+
+    @property
+    def timeout(self):
+        return self._timeout
+
+    @property
+    def user_agent(self):
+        return self._user_agent
+
+    @property
     def base_url(self) -> str:
-        return API_URL
+        return self._base_url
 
     async def __request(
         self,
@@ -106,8 +140,16 @@ class SessionAPI:
                     f"Ошибка разбора ответа: [{response_status}] {e.msg}"
                 )
 
+            if len(json_data) == 0:
+                raise EmptyResponse(f"Пустой ответ сервера: [{response_status}]")
+
             if response_status == 200 and json_data.get("success", False) is True:
                 return json_data
+            elif response_status == 400 or response_status == 401:
+                _log.warning(f"Ошибка доступа [{response_status}] {response_text}")
+                raise AccessDenied(
+                    f"Ошибка доступа: [{response_status}] {json_data.get('code', None)}: {json_data.get('message', None)}"
+                )
             else:
                 _log.debug(f"[{response_status}] {response_text}")
                 raise ResponseError(
@@ -235,7 +277,7 @@ class SessionAPI:
                 referer=f"{self.base_url}/cabinet/accounts/{meter.account.company_id}/{meter.account.id}/meters",
                 data=data,
             )
-        except ResponseError as e:
+        except SessionAPIException as e:
             raise ResponseError(f"Ошибка передачи показаний {str(e)}")
 
         _log.info(f"Показания переданы. {meter.title}: {value}")
@@ -248,7 +290,7 @@ async def push_measure(
     meter_title: str,
     meter_value: int,
 ):
-    async with SessionAPI(username=username, password=password) as session:
+    async with GUKKrasnodarAPI(username=username, password=password) as session:
         await session.login()
 
         account = next(

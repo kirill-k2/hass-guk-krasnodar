@@ -9,11 +9,11 @@ from homeassistant.const import CONF_USERNAME
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.helpers.entity_platform import EntityPlatform
 
-from .exceptions import EmptyResponse, SessionAPIException
+from .exceptions import EmptyResponse, AccessDenied, LoginError
 from .const import DOMAIN
 
 if TYPE_CHECKING:
-    from .session_api import SessionAPI
+    from .guk_krasnodar_api import GUKKrasnodarAPI
 
 
 def _make_log_prefix(
@@ -56,7 +56,7 @@ _RT = TypeVar("_RT")
 
 
 async def with_auto_auth(
-    api: SessionAPI,
+    api: GUKKrasnodarAPI,
     async_getter: Callable[..., Coroutine[Any, Any, _RT]],
     *args,
     **kwargs,
@@ -66,7 +66,8 @@ async def with_auto_auth(
     except EmptyResponse:
         # Attempt once more
         return await async_getter(*args, **kwargs)
-    except SessionAPIException:
+    # @todo уточнить ошибки протухания токена - вероятно, в отдельный эксепшн
+    except AccessDenied or LoginError:
         await api.login()
         return await async_getter(*args, **kwargs)
 

@@ -6,6 +6,7 @@ __all__ = (
     "async_reload_entry",
     "async_setup",
     "async_setup_entry",
+    "config_flow",
     "const",
     "sensor",
     "DOMAIN",
@@ -164,6 +165,7 @@ async def async_setup_entry(
                 + f"Удаление записи {entry_id} после удаления из конфигурации YAML"
             )
             hass.async_create_task(hass.config_entries.async_remove(entry_id))
+            # await hass.config_entries.async_remove(entry_id)
             return False
 
         user_cfg = yaml_config[unique_key]
@@ -183,9 +185,9 @@ async def async_setup_entry(
 
     _log.info(log_prefix + "Применение конфигурационной записи")
 
-    from session_api import SessionAPI
+    from .guk_krasnodar_api import GUKKrasnodarAPI
 
-    api_object = SessionAPI(
+    api_object = GUKKrasnodarAPI(
         username=username,
         password=user_cfg[CONF_PASSWORD],
         user_agent=user_cfg[CONF_USER_AGENT],
@@ -202,7 +204,7 @@ async def async_setup_entry(
         accounts = None
         for i in range(3):
             _log.debug(log_prefix + "Ожидание перед запросом лицевых счетов")
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
 
             try:
                 accounts = await api_object.accounts()
@@ -234,7 +236,9 @@ async def async_setup_entry(
 
     _log.debug(log_prefix + f"Найдено {len(accounts)} лицевых счетов")
 
-    api_objects: Dict[str, "SessionAPI"] = hass_data.setdefault(DATA_API_OBJECTS, {})
+    api_objects: Dict[str, "GUKKrasnodarAPI"] = hass_data.setdefault(
+        DATA_API_OBJECTS, {}
+    )
 
     # Create placeholders
     api_objects[entry_id] = api_object
@@ -243,19 +247,15 @@ async def async_setup_entry(
     hass.data.setdefault(DATA_UPDATE_DELEGATORS, {})[entry_id] = {}
 
     # Forward entry setup to sensor platform
-    for domain in SUPPORTED_PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(
-                config_entry,
-                domain,
-            )
-        )
+    await hass.config_entries.async_forward_entry_setups(
+        config_entry, SUPPORTED_PLATFORMS
+    )
 
     # Create options update listener
     update_listener = config_entry.add_update_listener(async_reload_entry)
     hass_data.setdefault(DATA_UPDATE_LISTENERS, {})[entry_id] = update_listener
 
-    _log.debug(log_prefix + ("Применение конфигурации успешно"))
+    _log.debug(log_prefix + "Применение конфигурации успешно")
     return True
 
 

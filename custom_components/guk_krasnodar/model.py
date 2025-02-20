@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .session_api import SessionAPI
+    from .guk_krasnodar_api import GUKKrasnodarAPI
 
 
 @dataclass
@@ -14,11 +14,17 @@ class Account:
     address: str = ""
     balance: float | None = None
     charge: float | None = None
-    api: SessionAPI | None = None
+    api: GUKKrasnodarAPI | None = None
 
     @property
     def code(self) -> str:
         return f"{self.company_id}_{self.id}"
+
+    def api_meters(self):
+        return self.api.meters(self)
+
+    def api_update_account_detail(self):
+        return self.api.update_account_detail(self)
 
 
 @dataclass
@@ -35,5 +41,9 @@ class Meter:
         return self.id
 
     @property
-    def api(self) -> SessionAPI:
+    def api(self) -> GUKKrasnodarAPI:
         return self.account.api if self.account else None
+
+    def api_send_indication(self, indication: int | None):
+        if indication is not None:
+            self.account.api.send_measure(self, indication)

@@ -59,7 +59,7 @@ from .const import (
     FORMAT_VAR_TITLE,
     FORMAT_VAR_TYPE,
     ATTR_COMMENT,
-    ATTR_INDICATION,
+    ATTR_INDICATIONS,
     ATTR_SUCCESS,
 )
 from .exceptions import SessionAPIException
@@ -69,7 +69,7 @@ _log = logging.getLogger(__name__)
 PUSH_INDICATIONS_SCHEMA = vol.All(
     cv.make_entity_service_schema(
         {
-            vol.Required(ATTR_INDICATION): cv.positive_int,
+            vol.Required(ATTR_INDICATIONS): cv.positive_int,
             vol.Optional(ATTR_IGNORE_INDICATIONS, default=False): cv.boolean,
             vol.Optional("notification"): lambda x: x,
         }
@@ -366,21 +366,15 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
             ATTR_ENTITY_ID: self.entity_id,
             ATTR_METER_CODE: meter_code,
             ATTR_SUCCESS: False,
-            ATTR_INDICATION: None,
+            ATTR_INDICATIONS: None,
             ATTR_COMMENT: None,
         }
 
         try:
-            indication = call_data[ATTR_INDICATION]
-            event_data[ATTR_INDICATION] = indication
+            indication = call_data[ATTR_INDICATIONS]
+            event_data[ATTR_INDICATIONS] = indication
 
-            kwargs = {"meter": meter, "value": indication}
-
-            await with_auto_auth(
-                meter.api,
-                meter.api.send_measure(),
-                **kwargs,
-            )
+            await with_auto_auth(meter.api, meter.api_send_indication, value=indication)
 
         except SessionAPIException as e:
             event_data[ATTR_COMMENT] = "API error: %s" % e

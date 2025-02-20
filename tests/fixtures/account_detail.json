@@ -1,0 +1,64 @@
+{
+  "info": [
+    {
+      "name": "Лицевой счет",
+      "value": "230123456",
+      "field_order": "1"
+    },
+    {
+      "name": "Адрес",
+      "value": "ул.Красная, д.1 кв.1",
+      "field_order": "2"
+    },
+    {
+      "name": "Оплачиваемая площадь",
+      "value": "99.99",
+      "field_order": "3"
+    },
+    {
+      "name": "Кол-во чел. на л/с",
+      "field_order": "4"
+    },
+    {
+      "name": "Задолженность (основные услуги)",
+      "value": "1234.56",
+      "field_order": "5"
+    },
+    {
+      "name": "Начисление за Февраль 2025 (основные услуги)",
+      "value": "6543.21",
+      "field_order": "7"
+    }
+  ],
+  "bills": [
+    {
+      "name": "Основные услуги",
+      "index": "1",
+      "value": "BillModule"
+    }
+  ],
+  "periods": [
+    {
+      "year": "2025",
+      "month": "1",
+      "period": "24301",
+      "month_name": "Январь",
+      "period_name": "Январь 2025"
+    },
+    {
+      "year": "2008",
+      "month": "1",
+      "period": "24097",
+      "month_name": "Январь",
+      "period_name": "Январь 2008"
+    }
+  ],
+  "success": true,
+  "message_after": {
+    "icon": true,
+    "type": "info",
+    "title": null,
+    "value": "* Для просмотра квитанции в формате PDF (Adobe Portable Document Format) Вам понадобится программа Adobe® Acrobat® Reader (Программа распространяется бесплатно) Если на Вашем компьютере эта программа не установлена, Вы можете <a href=\"https://get.adobe.com/ru/reader/\" target=\"blank\">загрузить ее с официального сайта Adobe Systems Inc.</a>"
+  },
+  "show_payonline": false
+}

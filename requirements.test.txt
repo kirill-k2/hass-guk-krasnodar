@@ -1,3 +1,10 @@
 pytest
 pytest-cov
 pytest-homeassistant-custom-component
+anyio
+pytest-asyncio
+pytest-tornasync
+pytest-trio
+pytest-twisted
+twisted
+service_identity

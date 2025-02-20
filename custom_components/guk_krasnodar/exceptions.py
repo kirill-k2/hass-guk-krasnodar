@@ -18,5 +18,9 @@ class LoginError(SessionAPIException):
     """Ошибка при попытке логина"""
 
 
+class AccessDenied(SessionAPIException):
+    """Ошибка при попытке логина"""
+
+
 class NoAuthError(SessionAPIException):
     """Ошибка авторизации"""
