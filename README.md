@@ -9,9 +9,15 @@ GUK Krasnodar personal cabinet information and status retrieval, with meter indi
 
 ## Установка
 
-1. Установите как custom_components
-1. Настройте yaml или добавить интеграцию через интерфейс 
+1. Установите HACS ([инструкция по установке на оф. сайте](https://hacs.xyz/docs/installation/installation/))
+1. Найдите `GUK Krasnodar` (`ГУК Краснодар`) в поиске по интеграциям <sup>1</sup>
+1. Установите последнюю версию компонента, нажав на кнопку `Установить` (`Install`)
 1. Перезапустите Home Assistant
+
+## Конфигурация компонента:
+
+- Вариант А: Через _Интеграции_ (в поиске - "ГУК Краснодар" или "GUK Krasnodar")
+- Вариант Б: YAML
 
 ### Пример конфигурации YAML
 
@@ -49,46 +55,61 @@ guk_krasnodar:
     meters: true | false
 ```
 
-## Сервис отправки показаний
+## Использование
+
+### Служба передачи показаний - `tns_energo.push_indications`
+
+Служба передачи показаний позволяет отправлять показания по счётчикам в личный кабинет, и
+имеет следующий набор параметров:
+
+| Название                   | Описание                                                                                               |
+|----------------------------|--------------------------------------------------------------------------------------------------------|
+| `target`                   | Выборка целевых объектов, для которых требуется передавать показания                                   |
+| `data`.`indications`       | Значение показаний без десятичной части (до точки)                                                     |
+| `data`.`indication_entity` | Объект, из которого будет взято значение для отправки. Применяется если в значении показаний указан 0. |
+
+#### Пример автоматизации
 
 Пример отправки показаний счетчика `sensor.pokazanya_schetchika_vody` каждого 18го числа в 12:00.
 
 ```yaml
-alias: Отправка показаний ГУК Краснодар
-description: -|
-  Отправлять показания по воде в 12 часов каждый 18й день месяца
-trigger:
-  - platform: time
-    at: "12:00:00"
-condition:
-  - condition: template
-    value_template: |
-      {{ now().day == 18 }}
-action:
-  - service: guk_krasnodar.push_indications
-    target:
-      entity_id: sensor.guk_krasnodar_1_12345_meter_67890
-    data:
-      indications: |
-        {{ states('sensor.pokazanya_schetchika_vody') | round(0) | int }}
-      notification: true
-mode: single
+automation:
+  - alias: Отправка показаний ГУК Краснодар
+    description: -|
+      Отправлять показания по воде в 12 часов каждый 18-й день месяца
+    trigger:
+      - platform: time
+        at: "12:00"
+    condition:
+      - condition: template
+        value_template: {{ now().day == 18 }}
+    action:
+      - service: guk_krasnodar.push_indications
+        target:
+          entity_id: sensor.guk_krasnodar_1_12345_meter_67890
+        data:
+          indications: 0
+          indication_entity: sensor.pokazanya_schetchika_vody
+    mode: single
 ```
-
-Так же через интерфейсе можно выбрать доступные счетчики воды из выпадающего списка. В этом случае indications необходимо указать как 0.
 
 ## Исправение ошибки с сертификатом
 
 При возникновении ошибки `SSL: CERTIFICATE_VERIFY_FAILED`:
 
-> ERROR (MainThread) [custom_components.guk_krasnodar.config_flow] Authentication error: LoginError('Ошибка авторизации ResponseError("Общая ошибка запроса: ClientConnectorCertificateErro
-r(ConnectionKey(host=\'lk.gukkrasnodar.ru\', port=443, is_ssl=True, ssl=True, proxy=None, proxy_auth=None, proxy_headers_hash=None), SSLCertVerificationError(1, \'[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: una
-ble to get local issuer certificate (_ssl.c:1018)\'))")')
+> ERROR (MainThread) [custom_components.guk_krasnodar.config_flow] Authentication error: LoginError('Ошибка авторизации
+> ResponseError("Общая ошибка запроса: ClientConnectorCertificateErro
+> r(ConnectionKey(host=\'lk.gukkrasnodar.ru\', port=443, is_ssl=True, ssl=True, proxy=None, proxy_auth=None,
+> proxy_headers_hash=None), SSLCertVerificationError(1, \'[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed:
+> una
+> ble to get local issuer certificate (_ssl.c:1018)\'))")')
 
-Необходимо в систему добавить корневой сертификат, используемый сайтом [lk.gukkrasnodar.ru](https://lk.gukkrasnodar.ru). 
+Необходимо в систему добавить корневой сертификат, используемый сайтом [lk.gukkrasnodar.ru](https://lk.gukkrasnodar.ru).
 
-На начало 2025 года это [GlobalSign](https://support.globalsign.com/ca-certificates/intermediate-certificates/alphassl-intermediate-certificates), 
-непосредственно сертификат доступен по ссылке: [GlobalSign GCC R6 AlphaSSL CA 2023](https://secure.globalsign.com/cacert/gsgccr6alphasslca2023.crt).
+На начало 2025 года
+это [GlobalSign](https://support.globalsign.com/ca-certificates/intermediate-certificates/alphassl-intermediate-certificates),
+непосредственно сертификат доступен по
+ссылке: [GlobalSign GCC R6 AlphaSSL CA 2023](https://secure.globalsign.com/cacert/gsgccr6alphasslca2023.crt).
 
 ### Ubuntu/Debian
 
@@ -112,11 +133,13 @@ sudo update-ca-certificates
     volumes:
       - ./homeassistant/certs:/usr/local/share/ca-certificates/extra:ro
     entrypoint:
-      [ "sh", "-c", "([ ! -f /etc/ssl/certs/.updated ] && cat /usr/local/share/ca-certificates/extra/*.crt >> /etc/ssl/certs/ca-certificates.crt && touch /etc/ssl/certs/.updated ); /init" ] 
+      [ "sh", "-c", "([ ! -f /etc/ssl/certs/.updated ] && cat /usr/local/share/ca-certificates/extra/*.crt >> /etc/ssl/certs/ca-certificates.crt && touch /etc/ssl/certs/.updated ); /init" ]
     ...
 ```
 
 ## API examples
+
+Примеры взаимодействия с API
 
 ### Accounts
 
@@ -172,7 +195,6 @@ sudo update-ca-certificates
 ```
 
 [meter_history.json](tests/fixtures/meter_history.json)
-
 
 ## Credits
 
