@@ -57,6 +57,11 @@ guk_krasnodar:
 
 ## Использование
 
+### Обновление
+
+По-умолчанию обновление баланса и последних переданных показаний производиться раз в 6 часов и чаще обновлять не
+рекомендуется.
+
 ### Служба передачи показаний - `tns_energo.push_indications`
 
 Служба передачи показаний позволяет отправлять показания по счётчикам в личный кабинет, и
@@ -82,7 +87,7 @@ automation:
         at: "12:00"
     condition:
       - condition: template
-        value_template: {{ now().day == 18 }}
+        value_template: { { now().day == 18 } }
     action:
       - service: guk_krasnodar.push_indications
         target:

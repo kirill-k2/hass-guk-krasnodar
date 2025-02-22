@@ -20,7 +20,7 @@ ATTR_TITLE: Final = "title"
 
 DEFAULT_NAME_FORMAT_ACCOUNTS: Final = "{type_ru_cap} {account_number}"
 DEFAULT_NAME_FORMAT_METERS: Final = "{type_ru_cap} {account_number} {title}"
-DEFAULT_SCAN_INTERVAL: Final = 60 * 60 * 12  # 12 hour
+DEFAULT_SCAN_INTERVAL: Final = 60 * 60 * 6  # 6 hour
 DEFAULT_USER_AGENT: Final = (
     "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0"
 )

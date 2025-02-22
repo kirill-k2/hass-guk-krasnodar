@@ -20,16 +20,19 @@ from .exceptions import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+LOG_TRACE_HTTP = False
 
 DEFAULT_TIMEOUT: Final = aiohttp.ClientTimeout(total=30)
 
 FIELD_DETAIL_METRIC_INDICATION: Final = re.compile(
     "Последнее показание (\\d+) от (.+)г"
 )
+
 FIELD_NAME_ACCOUNT_CHARGED: Final = re.compile(
     "Начисление за (.+) \\(основные услуги\\)"
 )
 FIELD_NAME_ACCOUNT_DEBT: Final = re.compile("Задолженность \\(основные услуги\\)")
+FIELD_NAME_ACCOUNT_CRED: Final = re.compile("Переплата \\(основные услуги\\)")
 
 API_URL: Final = "https://lk.gukkrasnodar.ru"
 
@@ -119,44 +122,39 @@ class GUKKrasnodarAPI:
             headers[aiohttp.hdrs.AUTHORIZATION] = "Bearer " + self._token
 
         try:
+            if LOG_TRACE_HTTP:
+                _LOGGER.debug(f"Request [{method}] {data}")
+
             if method == "POST":
                 async with self._session.post(
                     url, headers=headers, data=json.dumps(data)
                 ) as response:
                     response_status = response.status
-                    response_text = await response.text()
+                    response = await response.json()
             elif method == "GET":
                 async with self._session.get(url, headers=headers) as response:
                     response_status = response.status
-                    response_text = await response.text()
+                    response = await response.json()
             else:
                 raise NotImplementedError
 
-            if response_text is None or not response_text:
+            if LOG_TRACE_HTTP:
+                _LOGGER.debug(f"Response [{response_status}] {str(response)}")
+
+            if not response or len(response) == 0:
                 raise EmptyResponse(f"Пустой ответ сервера: [{response_status}]")
 
-            try:
-                json_data = json.loads(response_text)
-            except json.JSONDecodeError as e:
-                _LOGGER.debug(f"[{response_status}] {response_text}")
-                raise ResponseError(
-                    f"Ошибка разбора ответа: [{response_status}] {e.msg}"
-                )
-
-            if len(json_data) == 0:
-                raise EmptyResponse(f"Пустой ответ сервера: [{response_status}]")
-
-            if response_status == 200 and json_data.get("success", False) is True:
-                return json_data
+            if response_status == 200 and response.get("success", False) is True:
+                return response
             elif response_status == 400 or response_status == 401:
-                _LOGGER.warning(f"Ошибка доступа [{response_status}] {response_text}")
+                _LOGGER.warning(f"Ошибка доступа [{response_status}] {response}")
                 raise AccessDenied(
-                    f"Ошибка доступа: [{response_status}] {json_data.get('code', None)}: {json_data.get('message', None)}"
+                    f"Ошибка доступа: [{response_status}] {response.get('code', None)}: {response.get('message', None)}"
                 )
             else:
-                _LOGGER.debug(f"[{response_status}] {response_text}")
+                _LOGGER.debug(f"Ошибка сервера: [{response_status}] {response}")
                 raise ResponseError(
-                    f"Ошибка сервера: [{response_status}] {json_data.get('code', None)}: {json_data.get('message', None)}"
+                    f"Ошибка сервера: [{response_status}] {response.get('code', None)}: {response.get('message', None)}"
                 )
 
         except aiohttp.ClientError as e:
@@ -190,7 +188,7 @@ class GUKKrasnodarAPI:
 
         token = response.get("token", None)
         if token is not None and token:
-            _LOGGER.info("Успешная авторизация")
+            _LOGGER.debug("Успешная авторизация")
             self._token = token
         else:
             raise LoginError("Ошибка авторизации: нет токена")
@@ -205,7 +203,7 @@ class GUKKrasnodarAPI:
         )
 
         response = response.get("accounts", [])
-        _LOGGER.info(f"Список лицевых счетов получен ({len(response)})")
+        _LOGGER.debug(f"Список лицевых счетов получен ({len(response)})")
         _accounts = [
             Account(
                 id=account["id_account"],
@@ -216,7 +214,9 @@ class GUKKrasnodarAPI:
             )
             for account in response
         ]
-        _LOGGER.debug(_accounts)
+
+        if LOG_TRACE_HTTP:
+            _LOGGER.debug(_accounts)
         return _accounts
 
     async def async_update_account_detail(self, account: Account) -> [Account]:
@@ -228,15 +228,20 @@ class GUKKrasnodarAPI:
         )
 
         response = response.get("info", [])
-        _LOGGER.info(
+        _LOGGER.debug(
             f"Детали по счету {account.company_id} {account.id} получены ({len(response)})"
         )
+
         for detail in response:
             if FIELD_NAME_ACCOUNT_DEBT.match(detail["name"]):
                 account.balance = float_or_none(detail["value"])
+            elif FIELD_NAME_ACCOUNT_CRED.match(detail["name"]):
+                account.balance = float_or_none(detail["value"])
             elif FIELD_NAME_ACCOUNT_CHARGED.match(detail["name"]):
                 account.charged = float_or_none(detail["value"])
-        _LOGGER.debug(account)
+
+        if LOG_TRACE_HTTP:
+            _LOGGER.debug(account)
         return account
 
     async def async_meters(self, account: Account) -> [Meter]:
@@ -254,7 +259,7 @@ class GUKKrasnodarAPI:
             return int_or_none(m.group(1)), m.group(2)
 
         response = response.get("meter", [])
-        _LOGGER.info(f"Список счетчиков получен ({len(response)})")
+        _LOGGER.debug(f"Список счётчиков получен ({len(response)})")
         _meters = [
             Meter(
                 id=meter["id_meter"],
@@ -267,7 +272,8 @@ class GUKKrasnodarAPI:
             )
             for meter in response
         ]
-        _LOGGER.debug(_meters)
+        if LOG_TRACE_HTTP:
+            _LOGGER.debug(_meters)
         return _meters
 
     async def async_send_measure(self, meter: Meter, value: int | None):

@@ -191,17 +191,9 @@ class GUKKrasnodarAccount(GUKKrasnodarSensor):
                 entity.async_schedule_update_ha_state(force_refresh=True)
 
     async def async_update_internal(self) -> None:
-        account = self._account
-        account_code = account.code
-        accounts = await account.api.async_accounts()
+        self._account = await self._account.api_update_account_detail()
 
-        for account in accounts:
-            if account.code == account_code:
-                await account.api_update_account_detail()
-                self._account = account
-                break
-
-        self.register_supported_services(account)
+        self.register_supported_services(self._account)
 
     #################################################################################
     # Services callbacks

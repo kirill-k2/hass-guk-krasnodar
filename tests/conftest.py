@@ -47,6 +47,8 @@ CONFIG_FAST_UPDATES: Final = {
     },
 }
 
+FIXTURE_ACCOUNT_DETAIL = json.loads(load_fixture(f"{FIXTURE_JSON_ACCOUNT_DETAIL}"))
+
 logging.getLogger("custom_components.guk_krasnodar").setLevel(logging.INFO)
 
 
@@ -65,16 +67,22 @@ def gukk_aioclient_mock(aioclient_mock: AiohttpClientMocker):
         text=load_fixture(f"{FIXTURE_JSON_ACCOUNTS}"),
     )
 
+    async def _account_detail(method, url, data):
+        return AiohttpClientMockResponse(
+            method=method,
+            url=url,
+            json=FIXTURE_ACCOUNT_DETAIL,
+        )
+
     aioclient_mock.post(
         "https://lk.gukkrasnodar.ru/api/v1/user/account/info/extend",
         text=load_fixture(f"{FIXTURE_JSON_ACCOUNT_DETAIL}"),
-        # side_effect=HTTPStatus.OK,
+        side_effect=_account_detail,
     )
 
     aioclient_mock.post(
         "https://lk.gukkrasnodar.ru/api/v1/user/account/meters",
         text=load_fixture(f"{FIXTURE_JSON_METERS}"),
-        # side_effect=HTTPStatus.OK,
     )
 
     async def _auth_check(method, url, data):
@@ -89,8 +97,8 @@ def gukk_aioclient_mock(aioclient_mock: AiohttpClientMocker):
             return AiohttpClientMockResponse(
                 method=method,
                 url=url,
-                status=HTTPStatus.BAD_REQUEST,
                 text=load_fixture(f"{FIXTURE_JSON_AUTH_BAD_PASSWORD}"),
+                status=HTTPStatus.BAD_REQUEST,
             )
 
     # {

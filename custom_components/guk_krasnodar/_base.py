@@ -198,6 +198,9 @@ async def async_refresh_api_data(hass: HomeAssistant, config_entry: ConfigEntry)
         if account_config is False:
             continue
 
+        # @todo вероятно, не нужно делать запрос по деталям когда счёт отключен
+        await _wrap_update_task(account.api_update_account_detail())
+
         for platform, (async_add_entities, entity_classes) in update_delegators.items():
             platform_log_prefix_base = account_log_prefix_base + f"[{platform}]"
             for entity_cls in entity_classes:
@@ -368,9 +371,6 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
             ATTR_ATTRIBUTION: (ATTRIBUTION_RU % self.api_hostname),
             **(self.sensor_related_attributes or {}),
         }
-
-        # if ATTR_ACCOUNT_CODE not in attributes:
-        #     attributes[ATTR_ACCOUNT_CODE] = self._account.code
 
         self._handle_dev_presentation(
             attributes,
