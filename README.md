@@ -1,3 +1,6 @@
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![Лицензия](https://img.shields.io/badge/%D0%9B%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # ЛК ГУК Краснодар для Home Assistant
 
 Предоставление информации о текущем состоянии ваших лицевых счетов в ЛК ГУК Краснодар.
@@ -5,21 +8,39 @@
 
 GUK Krasnodar personal cabinet information and status retrieval, with meter indications submission capabilities.
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-green.svg)](https://github.com/custom-components/hacs) [![Лицензия](https://img.shields.io/badge/%D0%9B%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Поддержка](https://img.shields.io/badge/%D0%9F%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%B8%D0%B2%D0%B0%D0%B5%D1%82%D1%81%D1%8F%3F-%D0%B4%D0%B0-green.svg)](https://github.com/kirill-k2/hass-guk-krasnodar/graphs/commit-activity)
-
 ## Установка
 
+### Способ 1: Через HACS
+
 1. Установите HACS ([инструкция по установке на оф. сайте](https://hacs.xyz/docs/installation/installation/))
-1. Найдите `GUK Krasnodar` (`ГУК Краснодар`) в поиске по интеграциям <sup>1</sup>
-1. Установите последнюю версию компонента, нажав на кнопку `Установить` (`Install`)
-1. Перезапустите Home Assistant
+2. [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kirill-k2&repository=hass-guk-krasnodar&category=integration)
+3. Установите последнюю версию компонента, нажав на кнопку `Установить` (`Install`)
+4. Перезапустите Home Assistant
 
-## Конфигурация компонента:
+### Способ 2: Вручную
 
-- Вариант А: Через _Интеграции_ (в поиске - "ГУК Краснодар" или "GUK Krasnodar")
-- Вариант Б: YAML
+1. Скачайте архив [актуальной версии](https://github.com/kirill-k2/hass-guk-krasnodar/releases/latest)
+2. Распакуйте и Вручную скопируйте папку `guk_krasnodar` в директорию `/config/custom_components`
+3. Перезапустите Home Assistant
 
-### Пример конфигурации YAML
+## Настройка компонента:
+
+### Способ 1: Через настройки
+
+1. Перейдите в [Настройки](https://my.home-assistant.io/redirect/config)
+2. Пункт `Устройства и службы`, в нем [Интеграции](https://my.home-assistant.io/redirect/integrations)
+3. Пункт [Добавить интеграцию](https://my.home-assistant.io/redirect/config_flow_start?domain=guk_krasnodar)
+4. Далее - `Поиск`, указать **GUK Krasnodar**
+
+ИЛИ нажмите
+
+[![Добавить интеграцию](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start?domain=guk_krasnodar)
+
+Далее, следуя инструкциям, укажите логин/пароль и, при необходимости, выберите лицевой счет.
+
+### Способ 2: Через YAML
+
+Пример конфигурации YAML:
 
 ```yaml
 guk_krasnodar:
@@ -27,7 +48,7 @@ guk_krasnodar:
   password: super_password
 ```
 
-### Описание конфигурационной схемы
+#### Описание конфигурационной схемы
 
 ```yaml
 # Файл `configuration.yaml`
@@ -98,18 +119,17 @@ automation:
     mode: single
 ```
 
-## Исправение ошибки с сертификатом
+## Исправление ошибки с сертификатом
 
 При возникновении ошибки `SSL: CERTIFICATE_VERIFY_FAILED`:
 
 > ERROR (MainThread) [custom_components.guk_krasnodar.config_flow] Authentication error: LoginError('Ошибка авторизации
-> ResponseError("Общая ошибка запроса: ClientConnectorCertificateErro
-> r(ConnectionKey(host=\'lk.gukkrasnodar.ru\', port=443, is_ssl=True, ssl=True, proxy=None, proxy_auth=None,
+> ResponseError("Общая ошибка запроса: ClientConnectorCertificateError(ConnectionKey(host=\'lk.gukkrasnodar.ru\',
+> port=443, is_ssl=True, ssl=True, proxy=None, proxy_auth=None,
 > proxy_headers_hash=None), SSLCertVerificationError(1, \'[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed:
-> una
-> ble to get local issuer certificate (_ssl.c:1018)\'))")')
+> unable to get local issuer certificate (_ssl.c:1018)\'))")')
 
-Необходимо в систему добавить корневой сертификат, используемый сайтом [lk.gukkrasnodar.ru](https://lk.gukkrasnodar.ru).
+Необходимо в систему добавить корневой сертификат используемый сайтом [lk.gukkrasnodar.ru](https://lk.gukkrasnodar.ru).
 
 На начало 2025 года
 это [GlobalSign](https://support.globalsign.com/ca-certificates/intermediate-certificates/alphassl-intermediate-certificates),
@@ -132,74 +152,18 @@ sudo update-ca-certificates
 
 1. Сохранить `sgccr6alphasslca2023.crt` в папке `./homeassistant/certs`
 2. Исправить `docker-compose.yml` по образу и подобию:
-
-```yml
-  homeassistant:
-    volumes:
-      - ./homeassistant/certs:/usr/local/share/ca-certificates/extra:ro
-    entrypoint:
-      [ "sh", "-c", "([ ! -f /etc/ssl/certs/.updated ] && cat /usr/local/share/ca-certificates/extra/*.crt >> /etc/ssl/certs/ca-certificates.crt && touch /etc/ssl/certs/.updated ); /init" ]
-    ...
-```
-
-## API examples
-
-Примеры взаимодействия с API
-
-### Accounts
-
-`GET https://lk.gukkrasnodar.ru/api/v1/user/accounts`
-
-[accounts.json](tests/fixtures/accounts.json)
-
-### Account Details
-
-`POST https://lk.gukkrasnodar.ru/api/v1/user/account/info/extend`
-
-```json
-{
-  "id_company": 1,
-  "id_account": 12345
-}
-```
-
-[account_detail.json](tests/fixtures/account_detail.json)
-
-### Meter
-
-`POST https://lk.gukkrasnodar.ru/api/v1/user/account/meters`
-
-```json
-{
-  "id_company": 1,
-  "id_account": 12345
-}
-```
-
-[meters.json](tests/fixtures/meters.json)
-
-### Meter history
-
-`POST https://lk.gukkrasnodar.ru/api/v1/user/account/meter/measure/history`
-
-```json
-{
-  "id_account": 12345,
-  "id_company": 1,
-  "offset": 0,
-  "limit": null,
-  "id_meters": [
-    "67890"
-  ],
-  "begin_date": "2024-08-18T22:10:47.693Z",
-  "end_date": "2025-02-18T22:10:47.692Z",
-  "platform_type": "desktop",
-  "sort_by": null,
-  "descending": true
-}
-```
-
-[meter_history.json](tests/fixtures/meter_history.json)
+    ```yml
+      homeassistant:
+        volumes:
+          - ./homeassistant/certs:/usr/local/share/ca-certificates/extra:ro
+        entrypoint:
+          [ "sh", "-c", "([ ! -f /etc/ssl/certs/.updated ] && cat /usr/local/share/ca-certificates/extra/*.crt >> /etc/ssl/certs/ca-certificates.crt && touch /etc/ssl/certs/.updated ); /init" ]
+        ...
+    ```
+3. Перезапустите контейнер
+    ```shell
+    docker-compose up -d    
+    ```
 
 ## Credits
 

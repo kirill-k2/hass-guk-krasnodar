@@ -10,7 +10,6 @@ __all__ = (
 
 import asyncio
 import logging
-import re
 from abc import abstractmethod
 from datetime import timedelta
 from typing import (
@@ -20,10 +19,8 @@ from typing import (
     Dict,
     Generic,
     Hashable,
-    Iterable,
     List,
     Mapping,
-    MutableMapping,
     Optional,
     Set,
     SupportsInt,
@@ -61,9 +58,7 @@ from .const import (
     DATA_UPDATE_DELEGATORS,
     DOMAIN,
     FORMAT_VAR_ACCOUNT_CODE,
-    FORMAT_VAR_ACCOUNT_ID,
     FORMAT_VAR_CODE,
-    FORMAT_VAR_ID,
     SUPPORTED_PLATFORMS,
     FORMAT_VAR_ACCOUNT_NUMBER,
 )
@@ -269,7 +264,6 @@ class NameFormatDict(dict):
         return "{{" + str(key) + "}}"
 
 
-_TData = TypeVar("_TData")
 _TAccount = TypeVar("_TAccount", bound="Account")
 
 SupportedServicesType = Mapping[
@@ -314,39 +308,6 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
             # "suggested_area": account_object.address,
         }
 
-    def _handle_dev_presentation(
-        self,
-        mapping: MutableMapping[str, Any],
-        filter_vars: Iterable[str],
-        blackout_vars: Optional[Iterable[str]] = None,
-    ) -> None:
-        if self._account_config[CONF_DEV_PRESENTATION]:
-            filter_vars = set(filter_vars)
-            if blackout_vars is not None:
-                blackout_vars = set(blackout_vars)
-                filter_vars.difference_update(blackout_vars)
-
-                for attr in blackout_vars:
-                    value = mapping.get(attr)
-                    if value is not None:
-                        if isinstance(value, float):
-                            value = "#####.###"
-                        elif isinstance(value, int):
-                            value = "#####"
-                        elif isinstance(value, str):
-                            value = "XXXXX"
-                        else:
-                            value = "*****"
-                        mapping[attr] = value
-
-            for attr in filter_vars:
-                value = mapping.get(attr)
-                if value is not None:
-                    value = re.sub(r"[A-Za-z]", "X", str(value))
-                    value = re.sub(r"[0-9]", "#", value)
-                    value = re.sub(r"\w+", "*", value)
-                    mapping[attr] = value
-
     #################################################################################
     # Config getter helpers
     #################################################################################
@@ -372,11 +333,6 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
             **(self.sensor_related_attributes or {}),
         }
 
-        self._handle_dev_presentation(
-            attributes,
-            (),
-        )
-
         return attributes
 
     @property
@@ -394,12 +350,6 @@ class GUKKrasnodarEntity(Entity, Generic[_TAccount]):
 
         if FORMAT_VAR_ACCOUNT_NUMBER not in name_format_values:
             name_format_values[FORMAT_VAR_ACCOUNT_NUMBER] = self._account.number
-
-        self._handle_dev_presentation(
-            name_format_values,
-            (FORMAT_VAR_CODE, FORMAT_VAR_ACCOUNT_CODE),
-            (FORMAT_VAR_ACCOUNT_ID, FORMAT_VAR_ID),
-        )
 
         return self.name_format.format_map(NameFormatDict(name_format_values))
 

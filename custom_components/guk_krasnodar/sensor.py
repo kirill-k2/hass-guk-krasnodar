@@ -146,12 +146,6 @@ class GUKKrasnodarAccount(GUKKrasnodarSensor):
             ATTR_CHARGED: account.charged,
         }
 
-        self._handle_dev_presentation(
-            attributes,
-            (),
-            (ATTR_ACCOUNT_NUMBER, ATTR_ADDRESS),
-        )
-
         return attributes
 
     @property
@@ -314,21 +308,6 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
                 attributes[f"{ATTR_INFO}_{idx+1}"] = info
         else:
             attributes[ATTR_INFO] = meter.info
-
-        self._handle_dev_presentation(
-            attributes,
-            (),
-            (
-                ATTR_TITLE,
-                ATTR_INFO,
-                ATTR_INFO + "_1",
-                ATTR_INFO + "_2",
-                ATTR_INFO + "_3",
-                ATTR_INFO + "_4",
-                ATTR_INFO + "_5",
-                ATTR_DETAIL,
-            ),
-        )
 
         return attributes
 
