@@ -61,6 +61,8 @@ from .const import (
     ATTR_CHARGED,
     ATTR_LAST_INDICATION_DATE,
     ATTR_INDICATION_ENTITY,
+    ATTR_PUSH_ALLOWED,
+    ATTR_AREA,
 )
 from .exceptions import SessionAPIException
 
@@ -142,6 +144,7 @@ class GUKKrasnodarAccount(GUKKrasnodarSensor):
         attributes = {
             ATTR_ACCOUNT_NUMBER: account.number,
             ATTR_ADDRESS: account.address,
+            ATTR_AREA: account.area,
             ATTR_BALANCE: account.balance,
             ATTR_CHARGED: account.charged,
         }
@@ -280,8 +283,8 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
     @property
     def unique_id(self) -> str:
         """Return the unique ID of the sensor"""
-        met = self._meter
-        return f"{DOMAIN}_meter_{met.account.code}_{met.code}"
+        meter = self._meter
+        return f"{DOMAIN}_meter_{meter.account.code}_{meter.code}"
 
     @property
     def state(self) -> Union[int, str]:
@@ -300,7 +303,8 @@ class GUKKrasnodarMeter(GUKKrasnodarSensor):
             ATTR_TITLE: meter.title,
             ATTR_DETAIL: meter.detail,
             ATTR_LAST_INDICATION: meter.last_indication,
-            ATTR_LAST_INDICATION_DATE: meter.last_indications_date,
+            ATTR_LAST_INDICATION_DATE: meter.last_indication_date,
+            ATTR_PUSH_ALLOWED: meter.push_allowed,
         }
 
         if isinstance(meter.info, list):

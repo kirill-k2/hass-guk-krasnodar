@@ -25,14 +25,16 @@ LOG_TRACE_HTTP = False
 DEFAULT_TIMEOUT: Final = aiohttp.ClientTimeout(total=30)
 
 FIELD_DETAIL_METRIC_INDICATION: Final = re.compile(
-    "Последнее показание (\\d+) от (.+)г"
+    r".+показани.+? (\d+) от ([\d\w.]+\d)г?"
 )
 
 FIELD_NAME_ACCOUNT_CHARGED: Final = re.compile(
-    "Начисление за (.+) \\(основные услуги\\)"
+    r"Начисление за (.+) \(основные услуги\)"
 )
-FIELD_NAME_ACCOUNT_DEBT: Final = re.compile("Задолженность \\(основные услуги\\)")
-FIELD_NAME_ACCOUNT_CRED: Final = re.compile("Переплата \\(основные услуги\\)")
+FIELD_NAME_ACCOUNT_DEBT: Final = re.compile(r"Задолженность \(основные услуги\)")
+FIELD_NAME_ACCOUNT_CRED: Final = re.compile(r"Переплата \(основные услуги\)")
+
+FIELD_NAME_AREA: Final = re.compile(r"Оплачиваемая площадь")
 
 API_URL: Final = "https://lk.gukkrasnodar.ru"
 
@@ -239,6 +241,8 @@ class GUKKrasnodarAPI:
                 account.balance = float_or_none(detail["value"])
             elif FIELD_NAME_ACCOUNT_CHARGED.match(detail["name"]):
                 account.charged = float_or_none(detail["value"])
+            elif FIELD_NAME_AREA.match(detail["name"]):
+                account.area = float_or_none(detail["value"])
 
         if LOG_TRACE_HTTP:
             _LOGGER.debug(account)
@@ -252,12 +256,19 @@ class GUKKrasnodarAPI:
             data=data,
         )
 
-        def _parse_last_indication(s: str) -> tuple[int | None, str | None]:
-            m = FIELD_DETAIL_METRIC_INDICATION.match(s)
-            if not m:
-                return None, None
-            return int_or_none(m.group(1)), m.group(2)
+        def _parse_last_indication(
+            value: str | list | None,
+        ) -> tuple[int | None, str | None]:
+            if value:
+                if isinstance(value, str):
+                    value = [value]
+                for s in value:
+                    m = FIELD_DETAIL_METRIC_INDICATION.match(s)
+                    if m:
+                        return int_or_none(m.group(1)), m.group(2)
+            return None, None
 
+        push_allowed = response.get("volume_allow", False)
         response = response.get("meter", [])
         _LOGGER.debug(f"Список счётчиков получен ({len(response)})")
         _meters = [
@@ -267,8 +278,9 @@ class GUKKrasnodarAPI:
                 account=account,
                 detail=meter["detail"],
                 info=meter["info"],
-                last_indication=_parse_last_indication(meter["detail"])[0],
-                last_indications_date=_parse_last_indication(meter["detail"])[1],
+                last_indication=int(meter["curr_measure"]),
+                last_indication_date=_parse_last_indication(meter["info"])[1],
+                push_allowed=push_allowed,
             )
             for meter in response
         ]

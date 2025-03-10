@@ -36,7 +36,8 @@ async def test_api_accounts(hass, gukk_aioclient_mock):
     with mock_gukk_aiohttp_client(hass, gukk_aioclient_mock):
         api: GUKKrasnodarAPI = GUKKrasnodarAPI(username="username", password="password")
 
-    assert len(await api.async_accounts()) == 1
+    accounts = await api.async_accounts()
+    assert len(accounts) == 1
 
 
 async def test_api_meters(hass, gukk_aioclient_mock, mock_account):
@@ -45,6 +46,10 @@ async def test_api_meters(hass, gukk_aioclient_mock, mock_account):
 
     meters = await api.async_meters(mock_account)
     assert len(meters) == 1
+
+    assert meters[0].last_indication == 123
+    assert meters[0].last_indication_date == "18.02.2025"
+    assert meters[0].push_allowed
 
 
 async def test_api_update_account_detail(hass, gukk_aioclient_mock, mock_account):
@@ -55,6 +60,8 @@ async def test_api_update_account_detail(hass, gukk_aioclient_mock, mock_account
     assert len(accounts) == 1
     account = accounts[0]
     assert account.balance is None
+
     await api.async_update_account_detail(account)
     assert account.balance == 1234.56
     assert account.charged == 6543.21
+    assert account.area == 99.99

@@ -14,6 +14,7 @@ class Account:
     address: str = ""
     balance: float | None = None
     charged: float | None = None
+    area: float | None = None
 
     # @todo - вынести api в coordinator или аналогичный механизм
     api: GUKKrasnodarAPI | None = field(default=None, repr=False)
@@ -36,7 +37,8 @@ class Meter:
     detail: str = ""
     info: str | list[str] | None = None
     last_indication: int | None = None
-    last_indications_date: str | None = None
+    last_indication_date: str | None = None
+    push_allowed: bool | None = False
     account: Account | None = None
 
     @property
