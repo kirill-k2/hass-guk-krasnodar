@@ -12,8 +12,8 @@ GUK Krasnodar personal cabinet information and status retrieval, with meter indi
 
 ### Способ 1: Через HACS
 
-1. Установите HACS ([инструкция по установке на оф. сайте](https://hacs.xyz/docs/installation/installation/))
-2. [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kirill-k2&repository=hass-guk-krasnodar&category=integration)
+1. Установите HACS ([инструкция по установке на оф.сайте](https://hacs.xyz/docs/installation/installation/))
+2. Добавьте кастомный репозиторий: [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kirill-k2&repository=hass-guk-krasnodar&category=integration)
 3. Установите последнюю версию компонента, нажав на кнопку `Установить` (`Install`)
 4. Перезапустите Home Assistant
 
