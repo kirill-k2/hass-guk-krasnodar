@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from logging import exception
-from typing import Any, Union, SupportsInt, SupportsFloat, Final
+from typing import Any, Union, SupportsInt, SupportsFloat, Final, Match
 
 import aiohttp
 
@@ -24,8 +24,11 @@ LOG_TRACE_HTTP = False
 
 DEFAULT_TIMEOUT: Final = aiohttp.ClientTimeout(total=30)
 
-FIELD_DETAIL_METRIC_INDICATION: Final = re.compile(
-    r".+показани.+? (\d+) от ([\d\w.]+\d)г?"
+FIELD_CURRENT_METRIC_INDICATION: Final = re.compile(
+    r"Текущие показания: .*?(\d+).*? от .*?([\d.]+\d).*?"
+)
+FIELD_LAST_METRIC_INDICATION: Final = re.compile(
+    r"Предыдущие показания: .*?(\d+).*? от .*?([\d.]+\d).*?"
 )
 
 FIELD_NAME_ACCOUNT_CHARGED: Final = re.compile(
@@ -41,6 +44,29 @@ API_URL: Final = "https://lk.gukkrasnodar.ru"
 
 def _aiohttp_create_session(*args, **kwargs):
     return aiohttp.ClientSession(*args, **kwargs)
+
+
+def _parse_last_indication(
+    value: str | list | None,
+) -> tuple[int | None, str | None]:
+    if value:
+        if isinstance(value, str):
+            value = [value]
+
+        curr_match: Match[str] | None = next(
+            filter(None, (FIELD_CURRENT_METRIC_INDICATION.match(s) for s in value)),
+            None,
+        )
+        if curr_match:
+            return int_or_none(curr_match.group(1)), curr_match.group(2)
+
+        last_match: Match[str] | None = next(
+            filter(None, (FIELD_LAST_METRIC_INDICATION.match(s) for s in value)), None
+        )
+        if last_match:
+            return int_or_none(last_match.group(1)), last_match.group(2)
+
+    return None, None
 
 
 class GUKKrasnodarAPI:
@@ -256,18 +282,6 @@ class GUKKrasnodarAPI:
             data=data,
         )
 
-        def _parse_last_indication(
-            value: str | list | None,
-        ) -> tuple[int | None, str | None]:
-            if value:
-                if isinstance(value, str):
-                    value = [value]
-                for s in value:
-                    m = FIELD_DETAIL_METRIC_INDICATION.match(s)
-                    if m:
-                        return int_or_none(m.group(1)), m.group(2)
-            return None, None
-
         push_allowed = response.get("volume_allow", False)
         response = response.get("meter", [])
         _LOGGER.debug(f"Список счётчиков получен ({len(response)})")
@@ -278,7 +292,8 @@ class GUKKrasnodarAPI:
                 account=account,
                 detail=meter["detail"],
                 info=meter["info"],
-                last_indication=int(meter["curr_measure"]),
+                # last_indication=int(meter["curr_measure"]),
+                last_indication=_parse_last_indication(meter["info"])[0],
                 last_indication_date=_parse_last_indication(meter["info"])[1],
                 push_allowed=push_allowed,
             )

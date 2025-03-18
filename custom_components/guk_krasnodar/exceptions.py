@@ -1,4 +1,7 @@
-class SessionAPIException(Exception):
+from homeassistant.exceptions import HomeAssistantError
+
+
+class SessionAPIException(HomeAssistantError):
     """Базовый класс ошибок"""
 
 
